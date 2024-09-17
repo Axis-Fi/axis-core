@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Test} from "forge-std/Test.sol";
-import {Transfer} from "src/lib/Transfer.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {Transfer} from "../../src/lib/Transfer.sol";
 
-import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
-import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
-import {Permit2Clone} from "test/lib/permit2/Permit2Clone.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {MockAuctionHouse} from "./MockAuctionHouse.sol";
+import {MockFeeOnTransferERC20} from "../lib/mocks/MockFeeOnTransferERC20.sol";
+import {Permit2Clone} from "../lib/permit2/Permit2Clone.sol";
+import {Permit2User} from "../lib/permit2/Permit2User.sol";
 
 contract CollectPaymentTest is Test, Permit2User {
     MockAuctionHouse internal _auctionHouse;

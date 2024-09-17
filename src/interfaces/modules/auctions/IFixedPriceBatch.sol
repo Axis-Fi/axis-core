@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.8.19;
 
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
+import {IBatchAuction} from "../IBatchAuction.sol";
 
 /// @notice Interface for fixed price batch auctions
 interface IFixedPriceBatch is IBatchAuction {
@@ -29,7 +29,7 @@ interface IFixedPriceBatch is IBatchAuction {
     /// @notice Parameters for a fixed price auction
     ///
     /// @param  price            The fixed price of the lot
-    /// @param  minFillPercent   The minimum percentage of the lot that must be filled in order to settle (100% = 1e5)
+    /// @param  minFillPercent   The minimum percentage of the lot that must be filled in order to settle (100% = 100e2 = 1e4)
     struct AuctionDataParams {
         uint256 price;
         uint24 minFillPercent;
@@ -89,18 +89,16 @@ interface IFixedPriceBatch is IBatchAuction {
     ///
     /// @param  lotId_          The lot ID
     /// @return auctionData_    The `AuctionData`
-    function getAuctionData(uint96 lotId_)
-        external
-        view
-        returns (AuctionData memory auctionData_);
+    function getAuctionData(
+        uint96 lotId_
+    ) external view returns (AuctionData memory auctionData_);
 
     /// @notice Returns the `PartialFill` data for an auction lot
     ///
     /// @param  lotId_          The lot ID
     /// @return hasPartialFill  True if a partial fill exists
     /// @return partialFill     The `PartialFill` data
-    function getPartialFill(uint96 lotId_)
-        external
-        view
-        returns (bool hasPartialFill, PartialFill memory partialFill);
+    function getPartialFill(
+        uint96 lotId_
+    ) external view returns (bool hasPartialFill, PartialFill memory partialFill);
 }

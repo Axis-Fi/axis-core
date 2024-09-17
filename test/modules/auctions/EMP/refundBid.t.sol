@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {console2} from "forge-std/console2.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
-import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
+import {Module} from "../../../../src/modules/Modules.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {IEncryptedMarginalPrice} from
+    "../../../../src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
+import {EncryptedMarginalPrice} from "../../../../src/modules/auctions/batch/EMP.sol";
+import {IBatchAuction} from "../../../../src/interfaces/modules/IBatchAuction.sol";
 
-import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
+import {EmpTest} from "./EMPTest.sol";
 
 contract EmpRefundBidTest is EmpTest {
     // [X] when the lot id is invalid
@@ -122,7 +123,9 @@ contract EmpRefundBidTest is EmpTest {
         assertEq(refundAmount, 2e18, "refund amount");
     }
 
-    function test_lotIsConcluded_reverts(uint48 elapsed_)
+    function test_lotIsConcluded_reverts(
+        uint48 elapsed_
+    )
         external
         givenLotIsCreated
         givenLotHasStarted
@@ -465,11 +468,9 @@ contract EmpRefundBidTest is EmpTest {
         assertEq(refundAmount3, 4e18, "refund amount 3");
     }
 
-    function test_refundAmount_fuzz(uint256 bidAmount_)
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function test_refundAmount_fuzz(
+        uint256 bidAmount_
+    ) external givenLotIsCreated givenLotHasStarted {
         uint256 bidAmount =
             bound(bidAmount_, _scaleQuoteTokenAmount(_MIN_BID_SIZE), type(uint96).max);
 
@@ -484,7 +485,9 @@ contract EmpRefundBidTest is EmpTest {
         assertEq(refundAmount, bidAmount, "refund amount");
     }
 
-    function test_refundAmount_quoteTokenDecimalsLarger_fuzz(uint256 bidAmount_)
+    function test_refundAmount_quoteTokenDecimalsLarger_fuzz(
+        uint256 bidAmount_
+    )
         external
         givenQuoteTokenDecimals(17)
         givenBaseTokenDecimals(13)
@@ -505,7 +508,9 @@ contract EmpRefundBidTest is EmpTest {
         assertEq(refundAmount, bidAmount, "refund amount");
     }
 
-    function test_refundAmount_quoteTokenDecimalsSmaller_fuzz(uint256 bidAmount_)
+    function test_refundAmount_quoteTokenDecimalsSmaller_fuzz(
+        uint256 bidAmount_
+    )
         external
         givenQuoteTokenDecimals(13)
         givenBaseTokenDecimals(17)

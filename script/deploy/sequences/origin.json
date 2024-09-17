@@ -1,32 +1,26 @@
 {
-    "sequence": [
-        {
-            "name": "AtomicAuctionHouse"
-        },
-        {
-            "name": "BatchAuctionHouse"
-        },
-        {
-            "name": "AtomicCatalogue"
-        },
-        {
-            "name": "BatchCatalogue"
-        },
-        {
-            "name": "EncryptedMarginalPrice",
-            "installBatchAuctionHouse": true
-        },
-        {
-            "name": "FixedPriceSale",
-            "installAtomicAuctionHouse": true
-        },
-        {
-            "name": "AtomicLinearVesting",
-            "installAtomicAuctionHouse": true
-        },
-        {
-            "name": "BatchLinearVesting",
-            "installBatchAuctionHouse": true
-        }
-    ]
+  "sequence": [
+    {
+      "name": "BatchAuctionHouse"
+    },
+    {
+      "name": "BatchCatalogue"
+    },
+    {
+      "name": "EncryptedMarginalPrice",
+      "installBatchAuctionHouse": true,
+      "maxReferrerFee": 1000,
+      "maxCuratorFee": 1000
+    },
+    {
+      "name": "FixedPriceBatch",
+      "installBatchAuctionHouse": true,
+      "maxReferrerFee": 1000,
+      "maxCuratorFee": 1000
+    },
+    {
+      "name": "BatchLinearVesting",
+      "installBatchAuctionHouse": true
+    }
+  ]
 }

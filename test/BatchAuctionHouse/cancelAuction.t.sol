@@ -2,10 +2,10 @@
 pragma solidity 0.8.19;
 
 // Auctions
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
 
-import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "./AuctionHouseTest.sol";
 
 contract BatchCancelAuctionTest is BatchAuctionHouseTest {
     // cancel
@@ -38,7 +38,9 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         _auctionHouse.cancel(_lotId, bytes(""));
     }
 
-    function test_whenUnauthorized_reverts(address user_)
+    function test_whenUnauthorized_reverts(
+        address user_
+    )
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled

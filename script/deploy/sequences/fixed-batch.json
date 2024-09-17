@@ -1,0 +1,8 @@
+{
+  "sequence": [
+    {
+      "name": "FixedPriceBatch",
+      "installBatchAuctionHouse": true
+    }
+  ]
+}

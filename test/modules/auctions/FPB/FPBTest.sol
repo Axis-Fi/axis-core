@@ -2,18 +2,18 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {Test} from "forge-std/Test.sol";
-import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
 // Mocks
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {Permit2User} from "../../../lib/permit2/Permit2User.sol";
 
 // Modules
-import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
-import {FixedPriceBatch} from "src/modules/auctions/batch/FPB.sol";
-import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
+import {BatchAuctionHouse} from "../../../../src/BatchAuctionHouse.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {IBatchAuction} from "../../../../src/interfaces/modules/IBatchAuction.sol";
+import {FixedPriceBatch} from "../../../../src/modules/auctions/batch/FPB.sol";
+import {IFixedPriceBatch} from "../../../../src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 
 abstract contract FpbTest is Test, Permit2User {
     uint256 internal constant _BASE_SCALE = 1e18;
@@ -24,7 +24,7 @@ abstract contract FpbTest is Test, Permit2User {
 
     uint256 internal constant _LOT_CAPACITY = 10e18;
     uint48 internal constant _DURATION = 1 days;
-    uint24 internal constant _MIN_FILL_PERCENT = 5e4; // 50%
+    uint24 internal constant _MIN_FILL_PERCENT = 50e2; // 50%
     uint256 internal constant _PRICE = 2e18;
 
     BatchAuctionHouse internal _auctionHouse;
@@ -218,10 +218,9 @@ abstract contract FpbTest is Test, Permit2User {
         _;
     }
 
-    function _claimBid(uint64 bidId_)
-        internal
-        returns (IBatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput)
-    {
+    function _claimBid(
+        uint64 bidId_
+    ) internal returns (IBatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput) {
         uint64[] memory bidIds = new uint64[](1);
         bidIds[0] = bidId_;
 

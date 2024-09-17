@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
-import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
-import {BidEncoding} from "src/lib/MaxPriorityQueue.sol";
+import {Module} from "../../../../src/modules/Modules.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {EncryptedMarginalPrice} from "../../../../src/modules/auctions/batch/EMP.sol";
+import {IEncryptedMarginalPrice} from
+    "../../../../src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
+import {BidEncoding} from "../../../../src/lib/MaxPriorityQueue.sol";
 
-import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
+import {EmpTest} from "./EMPTest.sol";
 
-import {console2} from "forge-std/console2.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
 contract EmpSettleTest is EmpTest {
     using BidEncoding for bytes32;
@@ -122,7 +123,9 @@ contract EmpSettleTest is EmpTest {
     //  [X] given the next batch doesn't reach capacity above minimum price
     //   [X] it records settlement as finished with the marginal price as the minimum price
 
-    function _settle(uint256 bidNum_)
+    function _settle(
+        uint256 bidNum_
+    )
         internal
         returns (
             uint256 totalIn_,

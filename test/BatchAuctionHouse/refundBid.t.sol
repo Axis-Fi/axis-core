@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {IBatchAuction} from "../../src/interfaces/modules/IBatchAuction.sol";
 
-import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "./AuctionHouseTest.sol";
 
 contract BatchRefundBidTest is BatchAuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 1e18;

@@ -2,18 +2,19 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {Test} from "forge-std/Test.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
+import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
-import {StringHelper} from "test/lib/String.sol";
-import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {Permit2User} from "../../lib/permit2/Permit2User.sol";
+import {StringHelper} from "../../lib/String.sol";
+import {MockFeeOnTransferERC20} from "../../lib/mocks/MockFeeOnTransferERC20.sol";
 
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
-import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
-import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
-import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
+import {AtomicAuctionHouse} from "../../../src/AtomicAuctionHouse.sol";
+import {IDerivative} from "../../../src/interfaces/modules/IDerivative.sol";
+import {ILinearVesting} from "../../../src/interfaces/modules/derivatives/ILinearVesting.sol";
+import {LinearVesting} from "../../../src/modules/derivatives/LinearVesting.sol";
+import {SoulboundCloneERC20} from "../../../src/modules/derivatives/SoulboundCloneERC20.sol";
 
 contract LinearVestingTest is Test, Permit2User {
     using StringHelper for string;
@@ -53,7 +54,7 @@ contract LinearVestingTest is Test, Permit2User {
         vm.warp(_VESTING_START - 1);
 
         _underlyingToken =
-            new MockFeeOnTransferERC20("Underlying", "UNDERLYING", _underlyingTokenDecimals);
+            new MockFeeOnTransferERC20("Underlying", "UNDY", _underlyingTokenDecimals);
         _underlyingTokenAddress = address(_underlyingToken);
 
         _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
@@ -65,7 +66,7 @@ contract LinearVestingTest is Test, Permit2User {
         _vestingParamsBytes = abi.encode(_vestingParams);
 
         _wrappedDerivativeTokenName = "Underlying 2024-01-12";
-        _wrappedDerivativeTokenSymbol = "UNDERLYING 2024-01-12";
+        _wrappedDerivativeTokenSymbol = "UNDY 2024-01-12";
         _wrappedDerivativeTokenNameLength = bytes(_wrappedDerivativeTokenName).length;
         _wrappedDerivativeTokenSymbolLength = bytes(_wrappedDerivativeTokenSymbol).length;
     }
@@ -124,7 +125,7 @@ contract LinearVestingTest is Test, Permit2User {
         _vestingParamsBytes = abi.encode(_vestingParams);
 
         _wrappedDerivativeTokenName = "Underlying 2024-01-14";
-        _wrappedDerivativeTokenSymbol = "UNDERLYING 2024-01-14";
+        _wrappedDerivativeTokenSymbol = "UNDY 2024-01-14";
         _wrappedDerivativeTokenNameLength = bytes(_wrappedDerivativeTokenName).length;
         _wrappedDerivativeTokenSymbolLength = bytes(_wrappedDerivativeTokenSymbol).length;
         _;
@@ -841,6 +842,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
         assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
         assertEq(_linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "balanceOf mismatch");
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
     function test_mint_params_expiryTimestampIsBeforeCurrentTimestamp()
@@ -859,6 +861,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
         assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
         assertEq(_linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "balanceOf mismatch");
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
     function test_mint_params_afterExpiry()
@@ -880,6 +883,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(_linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "balanceOf mismatch");
         assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
         assertEq(_linearVesting.redeemable(_ALICE, tokenId), _AMOUNT, "redeemable mismatch");
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
     function test_mint_params_mintAmountIsZero_reverts() public {
@@ -905,6 +909,7 @@ contract LinearVestingTest is Test, Permit2User {
         // Check values
         assertTrue(tokenId > 0, "tokenId mismatch");
         assertEq(_linearVesting.balanceOf(address(0), tokenId), _AMOUNT, "balanceOf mismatch");
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
     function test_mint_params_insufficentBalance_reverts() public {
@@ -953,12 +958,12 @@ contract LinearVestingTest is Test, Permit2User {
         );
         assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
         assertEq(_linearVesting.redeemable(_ALICE, tokenId), 0, "redeemable mismatch");
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
-    function test_mint_params_afterVestingStart(uint48 elapsed_)
-        public
-        givenParentHasUnderlyingTokenBalance(_AMOUNT)
-    {
+    function test_mint_params_afterVestingStart(
+        uint48 elapsed_
+    ) public givenParentHasUnderlyingTokenBalance(_AMOUNT) {
         uint48 elapsed = uint48(bound(elapsed_, 1, _VESTING_DURATION));
         vm.warp(_VESTING_START + elapsed);
 
@@ -984,12 +989,12 @@ contract LinearVestingTest is Test, Permit2User {
             expectedRedeemableAmount,
             "redeemable mismatch"
         );
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
-    function test_mint_params_givenExistingDerivativeTokens_afterVestingStart(uint48 elapsed_)
-        public
-        givenParentHasUnderlyingTokenBalance(_AMOUNT + _AMOUNT_TWO)
-    {
+    function test_mint_params_givenExistingDerivativeTokens_afterVestingStart(
+        uint48 elapsed_
+    ) public givenParentHasUnderlyingTokenBalance(_AMOUNT + _AMOUNT_TWO) {
         uint48 elapsedOne = uint48(10_000);
         uint48 elapsedTwo = uint48(bound(elapsed_, elapsedOne + 1, _VESTING_DURATION));
 
@@ -1028,6 +1033,7 @@ contract LinearVestingTest is Test, Permit2User {
             expectedRedeemableAmount,
             "redeemable mismatch"
         );
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT + _AMOUNT_TWO, "totalSupply mismatch");
     }
 
     function test_mint_params_notWrapped_tokenNotDeployed()
@@ -1045,6 +1051,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
         assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
         assertEq(_linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "balanceOf mismatch");
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
     function test_mint_params_notWrapped_tokenDeployed()
@@ -1063,6 +1070,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
         assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
         assertEq(_linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "balanceOf mismatch");
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
     function test_mint_params_wrapped_wrappedTokenIsNotDeployed()
@@ -1083,6 +1091,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(
             SoulboundCloneERC20(wrappedAddress).balanceOf(_ALICE), _AMOUNT, "balanceOf mismatch"
         );
+        assertEq(_linearVesting.totalSupply(tokenId), 0, "totalSupply mismatch");
+        assertEq(SoulboundCloneERC20(wrappedAddress).totalSupply(), _AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_params_wrapped_wrappedTokenIsDeployed()
@@ -1103,6 +1113,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(
             SoulboundCloneERC20(wrappedAddress).balanceOf(_ALICE), _AMOUNT, "balanceOf mismatch"
         );
+        assertEq(_linearVesting.totalSupply(tokenId), 0, "totalSupply mismatch");
+        assertEq(SoulboundCloneERC20(wrappedAddress).totalSupply(), _AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_params_notParent()
@@ -1123,6 +1135,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(
             SoulboundCloneERC20(wrappedAddress).balanceOf(_ALICE), _AMOUNT, "balanceOf mismatch"
         );
+        assertEq(_linearVesting.totalSupply(tokenId), 0, "totalSupply mismatch");
+        assertEq(SoulboundCloneERC20(wrappedAddress).totalSupply(), _AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_params_notParent_insufficientBalance_reverts()
@@ -1196,6 +1210,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Check values
         assertEq(_linearVesting.balanceOf(address(0), tokenId), _AMOUNT);
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
     function test_mint_tokenId_insufficentBalance_reverts() public givenDerivativeIsDeployed {
@@ -1244,13 +1259,12 @@ contract LinearVestingTest is Test, Permit2User {
         );
         assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
         assertEq(_linearVesting.redeemable(_ALICE, tokenId), 0, "redeemable mismatch");
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
-    function test_mint_tokenId_afterVestingStart(uint48 elapsed_)
-        public
-        givenParentHasUnderlyingTokenBalance(_AMOUNT)
-        givenDerivativeIsDeployed
-    {
+    function test_mint_tokenId_afterVestingStart(
+        uint48 elapsed_
+    ) public givenParentHasUnderlyingTokenBalance(_AMOUNT) givenDerivativeIsDeployed {
         uint48 elapsed = uint48(bound(elapsed_, 1, _VESTING_DURATION));
         vm.warp(_VESTING_START + elapsed);
 
@@ -1275,6 +1289,7 @@ contract LinearVestingTest is Test, Permit2User {
             expectedRedeemableAmount,
             "redeemable mismatch"
         );
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
     function test_mint_tokenId_afterVestingExpiry()
@@ -1297,9 +1312,12 @@ contract LinearVestingTest is Test, Permit2User {
         );
         assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
         assertEq(_linearVesting.redeemable(_ALICE, tokenId), _AMOUNT, "redeemable mismatch");
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
-    function test_mint_tokenId_givenExistingDerivativeTokens_afterVestingStart(uint48 elapsed_)
+    function test_mint_tokenId_givenExistingDerivativeTokens_afterVestingStart(
+        uint48 elapsed_
+    )
         public
         givenParentHasUnderlyingTokenBalance(_AMOUNT + _AMOUNT_TWO)
         givenDerivativeIsDeployed
@@ -1340,6 +1358,7 @@ contract LinearVestingTest is Test, Permit2User {
             expectedRedeemableAmount,
             "redeemable mismatch"
         );
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT + _AMOUNT_TWO, "totalSupply mismatch");
     }
 
     function test_mint_tokenId_givenExistingDerivativeTokens_afterVestingExpiry()
@@ -1377,6 +1396,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(
             _linearVesting.redeemable(_ALICE, tokenId), _AMOUNT + _AMOUNT_TWO, "redeemable mismatch"
         );
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT + _AMOUNT_TWO, "totalSupply mismatch");
     }
 
     function test_mint_tokenId_notWrapped()
@@ -1394,6 +1414,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(wrappedAddress == address(0));
         assertEq(amountCreated, _AMOUNT);
         assertEq(_linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "balanceOf mismatch");
+        assertEq(_linearVesting.totalSupply(tokenId), _AMOUNT, "totalSupply mismatch");
     }
 
     function test_mint_tokenId_wrapped_wrappedTokenIsNotDeployed()
@@ -1414,6 +1435,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(
             SoulboundCloneERC20(wrappedAddress).balanceOf(_ALICE), _AMOUNT, "balanceOf mismatch"
         );
+        assertEq(_linearVesting.totalSupply(tokenId), 0, "totalSupply mismatch");
+        assertEq(SoulboundCloneERC20(wrappedAddress).totalSupply(), _AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_tokenId_wrapped_wrappedTokenIsDeployed()
@@ -1434,6 +1457,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(
             SoulboundCloneERC20(wrappedAddress).balanceOf(_ALICE), _AMOUNT, "balanceOf mismatch"
         );
+        assertEq(_linearVesting.totalSupply(tokenId), 0, "totalSupply mismatch");
+        assertEq(SoulboundCloneERC20(wrappedAddress).totalSupply(), _AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_tokenId_notParent()
@@ -1454,6 +1479,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(
             SoulboundCloneERC20(wrappedAddress).balanceOf(_ALICE), _AMOUNT, "balanceOf mismatch"
         );
+        assertEq(_linearVesting.totalSupply(tokenId), 0, "totalSupply mismatch");
+        assertEq(SoulboundCloneERC20(wrappedAddress).totalSupply(), _AMOUNT, "balanceOf mismatch");
     }
 
     // redeem
@@ -1492,11 +1519,9 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.redeem(_derivativeTokenId, 0);
     }
 
-    function test_redeem_givenAmountGreaterThanRedeemable_reverts(uint48 elapsed_)
-        public
-        givenDerivativeIsDeployed
-        givenAliceHasDerivativeTokens(_AMOUNT)
-    {
+    function test_redeem_givenAmountGreaterThanRedeemable_reverts(
+        uint48 elapsed_
+    ) public givenDerivativeIsDeployed givenAliceHasDerivativeTokens(_AMOUNT) {
         // Warp to mid-way, so not all tokens are vested
         uint48 elapsed = uint48(bound(elapsed_, 1, _VESTING_DURATION - 1));
         vm.warp(_VESTING_START + elapsed);
@@ -1523,7 +1548,9 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.redeem(_derivativeTokenId, _AMOUNT);
     }
 
-    function test_redeem_givenWrappedTokenNotDeployed(uint256 amount_)
+    function test_redeem_givenWrappedTokenNotDeployed(
+        uint256 amount_
+    )
         public
         givenDerivativeIsDeployed
         givenAliceHasDerivativeTokens(_AMOUNT)
@@ -1538,9 +1565,12 @@ contract LinearVestingTest is Test, Permit2User {
         // Check values
         assertEq(_linearVesting.balanceOf(_ALICE, _derivativeTokenId), _AMOUNT - amount);
         assertEq(SoulboundCloneERC20(_underlyingTokenAddress).balanceOf(_ALICE), amount);
+        assertEq(_linearVesting.totalSupply(_derivativeTokenId), _AMOUNT - amount);
     }
 
-    function test_redeem_givenWrappedBalance(uint256 amount_)
+    function test_redeem_givenWrappedBalance(
+        uint256 amount_
+    )
         public
         givenWrappedDerivativeIsDeployed
         givenAliceHasWrappedDerivativeTokens(_AMOUNT)
@@ -1556,9 +1586,13 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(_linearVesting.balanceOf(_ALICE, _derivativeTokenId), 0);
         assertEq(SoulboundCloneERC20(_derivativeWrappedAddress).balanceOf(_ALICE), _AMOUNT - amount);
         assertEq(SoulboundCloneERC20(_underlyingTokenAddress).balanceOf(_ALICE), amount);
+        assertEq(_linearVesting.totalSupply(_derivativeTokenId), 0);
+        assertEq(SoulboundCloneERC20(_derivativeWrappedAddress).totalSupply(), _AMOUNT - amount);
     }
 
-    function test_redeem_givenUnwrappedBalance(uint256 amount_)
+    function test_redeem_givenUnwrappedBalance(
+        uint256 amount_
+    )
         public
         givenWrappedDerivativeIsDeployed
         givenAliceHasDerivativeTokens(_AMOUNT)
@@ -1574,6 +1608,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(_linearVesting.balanceOf(_ALICE, _derivativeTokenId), _AMOUNT - amount);
         assertEq(SoulboundCloneERC20(_derivativeWrappedAddress).balanceOf(_ALICE), 0);
         assertEq(SoulboundCloneERC20(_underlyingTokenAddress).balanceOf(_ALICE), amount);
+        assertEq(_linearVesting.totalSupply(_derivativeTokenId), _AMOUNT - amount);
+        assertEq(SoulboundCloneERC20(_derivativeWrappedAddress).totalSupply(), 0);
     }
 
     function test_redeem_givenMixedBalance()
@@ -1593,6 +1629,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(_linearVesting.balanceOf(_ALICE, _derivativeTokenId), 0); // Redeems unwrapped first
         assertEq(SoulboundCloneERC20(_derivativeWrappedAddress).balanceOf(_ALICE), _AMOUNT - 1);
         assertEq(SoulboundCloneERC20(_underlyingTokenAddress).balanceOf(_ALICE), amountToRedeem);
+        assertEq(_linearVesting.totalSupply(_derivativeTokenId), 0);
+        assertEq(SoulboundCloneERC20(_derivativeWrappedAddress).totalSupply(), _AMOUNT - 1);
     }
 
     // redeem max
@@ -1643,6 +1681,7 @@ contract LinearVestingTest is Test, Permit2User {
         // Check values
         assertEq(_linearVesting.balanceOf(_ALICE, _derivativeTokenId), 0);
         assertEq(SoulboundCloneERC20(_underlyingTokenAddress).balanceOf(_ALICE), _AMOUNT);
+        assertEq(_linearVesting.totalSupply(_derivativeTokenId), 0);
     }
 
     function test_redeemMax_givenWrappedBalance_givenVestingExpiry()
@@ -1659,6 +1698,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(_linearVesting.balanceOf(_ALICE, _derivativeTokenId), 0);
         assertEq(SoulboundCloneERC20(_derivativeWrappedAddress).balanceOf(_ALICE), 0);
         assertEq(SoulboundCloneERC20(_underlyingTokenAddress).balanceOf(_ALICE), _AMOUNT);
+        assertEq(_linearVesting.totalSupply(_derivativeTokenId), 0);
+        assertEq(SoulboundCloneERC20(_derivativeWrappedAddress).totalSupply(), 0);
     }
 
     function test_redeemMax_givenUnwrappedBalance_givenVestingExpiry()
@@ -1675,6 +1716,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(_linearVesting.balanceOf(_ALICE, _derivativeTokenId), 0);
         assertEq(SoulboundCloneERC20(_derivativeWrappedAddress).balanceOf(_ALICE), 0);
         assertEq(SoulboundCloneERC20(_underlyingTokenAddress).balanceOf(_ALICE), _AMOUNT);
+        assertEq(_linearVesting.totalSupply(_derivativeTokenId), 0);
+        assertEq(SoulboundCloneERC20(_derivativeWrappedAddress).totalSupply(), 0);
     }
 
     function test_redeemMax(uint48 elapsed_) public givenWrappedDerivativeIsDeployed {
@@ -1716,6 +1759,16 @@ contract LinearVestingTest is Test, Permit2User {
             SoulboundCloneERC20(_underlyingTokenAddress).balanceOf(_ALICE),
             redeemable,
             "underlying token: balanceOf mismatch"
+        );
+        assertEq(
+            _linearVesting.totalSupply(_derivativeTokenId),
+            expectedBalanceUnwrapped,
+            "derivative token: totalSupply mismatch"
+        );
+        assertEq(
+            SoulboundCloneERC20(_derivativeWrappedAddress).totalSupply(),
+            expectedBalanceWrapped,
+            "wrapped derivative token: totalSupply mismatch"
         );
     }
 
@@ -1792,11 +1845,9 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(redeemableAmount, 0);
     }
 
-    function test_redeemable_givenBeforeExpiry(uint256 amount_)
-        public
-        givenWrappedDerivativeIsDeployed
-        givenAliceHasDerivativeTokens(_AMOUNT)
-    {
+    function test_redeemable_givenBeforeExpiry(
+        uint256 amount_
+    ) public givenWrappedDerivativeIsDeployed givenAliceHasDerivativeTokens(_AMOUNT) {
         uint256 amount = bound(amount_, 1, _AMOUNT);
 
         // Mint wrapped derivative tokens
@@ -1947,11 +1998,9 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(claimedAmount, vestedAmount, "claimedAmount mismatch");
     }
 
-    function test_redeemable_givenTokensMintedAfterDeployment(uint256 amount_)
-        public
-        givenWrappedDerivativeIsDeployed
-        givenAliceHasWrappedDerivativeTokens(_AMOUNT)
-    {
+    function test_redeemable_givenTokensMintedAfterDeployment(
+        uint256 amount_
+    ) public givenWrappedDerivativeIsDeployed givenAliceHasWrappedDerivativeTokens(_AMOUNT) {
         uint256 amount = bound(amount_, 1e9, _AMOUNT);
 
         // Warp to before expiry
@@ -1970,11 +2019,9 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(redeemableAmount, expectedRedeemable, "redeemable mismatch");
     }
 
-    function test_redeemable_givenWrappedTokensMintedAfterDeployment(uint256 amount_)
-        public
-        givenWrappedDerivativeIsDeployed
-        givenAliceHasDerivativeTokens(_AMOUNT)
-    {
+    function test_redeemable_givenWrappedTokensMintedAfterDeployment(
+        uint256 amount_
+    ) public givenWrappedDerivativeIsDeployed givenAliceHasDerivativeTokens(_AMOUNT) {
         uint256 amount = bound(amount_, 1e9, _AMOUNT);
 
         // Warp to before expiry
@@ -2166,11 +2213,9 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.wrap(_derivativeTokenId, _AMOUNT);
     }
 
-    function test_wrap_givenWrappedTokenNotDeployed(uint256 wrapAmount_)
-        public
-        givenDerivativeIsDeployed
-        givenAliceHasDerivativeTokens(_AMOUNT)
-    {
+    function test_wrap_givenWrappedTokenNotDeployed(
+        uint256 wrapAmount_
+    ) public givenDerivativeIsDeployed givenAliceHasDerivativeTokens(_AMOUNT) {
         uint256 wrapAmount = bound(wrapAmount_, 1, _AMOUNT);
 
         // Call
@@ -2193,11 +2238,9 @@ contract LinearVestingTest is Test, Permit2User {
         );
     }
 
-    function test_wrap_givenWrappedTokenDeployed(uint256 wrapAmount_)
-        public
-        givenWrappedDerivativeIsDeployed
-        givenAliceHasDerivativeTokens(_AMOUNT)
-    {
+    function test_wrap_givenWrappedTokenDeployed(
+        uint256 wrapAmount_
+    ) public givenWrappedDerivativeIsDeployed givenAliceHasDerivativeTokens(_AMOUNT) {
         uint256 wrapAmount = bound(wrapAmount_, 1, _AMOUNT);
 
         // Call
@@ -2274,11 +2317,9 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.unwrap(_derivativeTokenId, _AMOUNT);
     }
 
-    function test_unwrap(uint256 unwrapAmount_)
-        public
-        givenWrappedDerivativeIsDeployed
-        givenAliceHasWrappedDerivativeTokens(_AMOUNT)
-    {
+    function test_unwrap(
+        uint256 unwrapAmount_
+    ) public givenWrappedDerivativeIsDeployed givenAliceHasWrappedDerivativeTokens(_AMOUNT) {
         uint256 unwrapAmount = bound(unwrapAmount_, 1, _AMOUNT);
 
         // Call
@@ -2492,5 +2533,78 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Call
         _linearVesting.exercise(_derivativeTokenId, _AMOUNT);
+    }
+
+    // tokenURI
+    // [X] given the vesting period hasn't started
+    //    [X] the progress bar is grey (verified externally)
+    // [X] given the vesting period has just started
+    //    [X] the progress bar has blue green gradient at the left bar (verified externally)
+    // [X] given the vesting period is halfway through
+    //    [X] the progress bar has blue green gradient in the middle and a circle showing current point (verified externally)
+    // [X] given the vesting period has ended
+    //    [X] the progress bar is fully blue green gradient (verified externally)
+
+    function test_tokenURI_beforeStart()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(_AMOUNT)
+    {
+        // Call
+        string memory tokenURI = _linearVesting.tokenURI(_derivativeTokenId);
+
+        console2.log("beforeStart: ", tokenURI);
+    }
+
+    function test_tokenURI_atStart()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(_AMOUNT)
+    {
+        vm.warp(_VESTING_START);
+
+        // Call
+        string memory tokenURI = _linearVesting.tokenURI(_derivativeTokenId);
+
+        console2.log("atStart: ", tokenURI);
+    }
+
+    function test_tokenURI_halfway()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(_AMOUNT)
+    {
+        vm.warp(_VESTING_START + _VESTING_DURATION / 2);
+
+        // Call
+        string memory tokenURI = _linearVesting.tokenURI(_derivativeTokenId);
+
+        console2.log("halfway: ", tokenURI);
+    }
+
+    function test_tokenURI_atEnd()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(_AMOUNT)
+    {
+        vm.warp(_VESTING_START + _VESTING_DURATION);
+
+        // Call
+        string memory tokenURI = _linearVesting.tokenURI(_derivativeTokenId);
+
+        console2.log("atEnd: ", tokenURI);
+    }
+
+    function test_tokenURI_afterEnd()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(_AMOUNT)
+    {
+        vm.warp(_VESTING_START + _VESTING_DURATION * 2);
+
+        // Call
+        string memory tokenURI = _linearVesting.tokenURI(_derivativeTokenId);
+
+        console2.log("afterEnd: ", tokenURI);
     }
 }

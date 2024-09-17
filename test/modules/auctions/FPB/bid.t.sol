@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
+import {Module} from "../../../../src/modules/Modules.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {IFixedPriceBatch} from "../../../../src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 
-import {FpbTest} from "test/modules/auctions/FPB/FPBTest.sol";
+import {FpbTest} from "./FPBTest.sol";
 
 contract FpbBidTest is FpbTest {
     uint256 internal constant _BID_AMOUNT = 2e18;

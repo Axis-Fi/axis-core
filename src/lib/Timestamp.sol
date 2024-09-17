@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {uint2str} from "src/lib/Uint2Str.sol";
+import {uint2str} from "./Uint2Str.sol";
 
 library Timestamp {
-    function toPaddedString(uint48 timestamp)
-        internal
-        pure
-        returns (string memory, string memory, string memory)
-    {
+    function toPaddedString(
+        uint48 timestamp
+    ) internal pure returns (string memory, string memory, string memory) {
         // Convert a number of days into a human-readable date, courtesy of BokkyPooBah.
         // Source: https://github.com/bokkypoobah/BokkyPooBahsDateTimeLibrary/blob/master/contracts/BokkyPooBahsDateTimeLibrary.sol
 

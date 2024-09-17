@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {FixedPointMathLib as Math} from "lib/solady/src/utils/FixedPointMathLib.sol";
-import {console2} from "forge-std/console2.sol";
+import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
-import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
+import {Module} from "../../../../src/modules/Modules.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {IEncryptedMarginalPrice} from
+    "../../../../src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
+import {EncryptedMarginalPrice} from "../../../../src/modules/auctions/batch/EMP.sol";
+import {IBatchAuction} from "../../../../src/interfaces/modules/IBatchAuction.sol";
 
-import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
+import {EmpTest} from "./EMPTest.sol";
 
 contract EmpClaimBidsTest is EmpTest {
     uint256 internal constant _BID_AMOUNT = 8e18;
@@ -268,12 +269,10 @@ contract EmpClaimBidsTest is EmpTest {
         assertEq(bidClaimTwoView.refund, bidClaimTwo.refund, "bid two: refund");
     }
 
-    function test_unsuccessfulBid_fuzz(uint256 bidAmountIn_)
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-    {
-        uint256 minFillAmount = _MIN_FILL_PERCENT * _LOT_CAPACITY / 1e5;
+    function test_unsuccessfulBid_fuzz(
+        uint256 bidAmountIn_
+    ) external givenLotIsCreated givenLotHasStarted {
+        uint256 minFillAmount = _MIN_FILL_PERCENT * _LOT_CAPACITY / 100e2;
         // Bound the amounts
         uint256 bidAmountIn = bound(bidAmountIn_, 1e18, minFillAmount - 1); // Ensures that it cannot settle even at minimum price
         uint256 bidAmountOut = 1e18; // at minimum price
@@ -924,11 +923,9 @@ contract EmpClaimBidsTest is EmpTest {
         assertEq(bidClaimThreeView.refund, bidClaimThree.refund, "bid three: refund");
     }
 
-    function test_successfulBid_amountIn_fuzz(uint256 bidAmountIn_)
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function test_successfulBid_amountIn_fuzz(
+        uint256 bidAmountIn_
+    ) external givenLotIsCreated givenLotHasStarted {
         // Bound the amount in
         uint256 bidAmountIn = bound(bidAmountIn_, _BID_AMOUNT, 12e18); // Ensures that the price is greater than _MIN_PRICE and bid 2
 
@@ -999,11 +996,9 @@ contract EmpClaimBidsTest is EmpTest {
         assertEq(bidClaimTwoView.refund, bidClaimTwo.refund, "bid two: refund");
     }
 
-    function test_successfulBid_amountOut_fuzz(uint256 bidAmountOut_)
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function test_successfulBid_amountOut_fuzz(
+        uint256 bidAmountOut_
+    ) external givenLotIsCreated givenLotHasStarted {
         // Bound the amount out
         uint256 bidAmountOut = bound(bidAmountOut_, _BID_AMOUNT_OUT, 5e18); // Ensures that the lot settles but is not overfilled
         uint256 bidAmountIn = 11e18; // Ensures that the price is greater than bid 2

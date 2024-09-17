@@ -2,50 +2,47 @@
 pragma solidity 0.8.19;
 
 // Scripting libraries
-import {Script, console2} from "forge-std/Script.sol";
-import {stdJson} from "forge-std/StdJson.sol";
-import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
-import {WithSalts} from "script/salts/WithSalts.s.sol";
+import {Script, console2} from "@forge-std-1.9.1/Script.sol";
+import {stdJson} from "@forge-std-1.9.1/StdJson.sol";
+import {WithEnvironment} from "./WithEnvironment.s.sol";
+import {WithSalts} from "../salts/WithSalts.s.sol";
 
 // System contracts
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
-import {AtomicCatalogue} from "src/AtomicCatalogue.sol";
-import {BatchCatalogue} from "src/BatchCatalogue.sol";
-import {Module} from "src/modules/Modules.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
+import {AtomicAuctionHouse} from "../../src/AtomicAuctionHouse.sol";
+import {BatchAuctionHouse} from "../../src/BatchAuctionHouse.sol";
+import {AtomicCatalogue} from "../../src/AtomicCatalogue.sol";
+import {BatchCatalogue} from "../../src/BatchCatalogue.sol";
+import {Module, Keycode, keycodeFromVeecode} from "../../src/modules/Modules.sol";
+import {IFeeManager} from "../../src/interfaces/IFeeManager.sol";
 
 // Auction modules
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {FixedPriceSale} from "src/modules/auctions/atomic/FPS.sol";
+import {EncryptedMarginalPrice} from "../../src/modules/auctions/batch/EMP.sol";
+import {FixedPriceSale} from "../../src/modules/auctions/atomic/FPS.sol";
+import {FixedPriceBatch} from "../../src/modules/auctions/batch/FPB.sol";
 
 // Derivative modules
-import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
-
-// Callbacks
-import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
-import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
-import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
-import {MerkleAllowlist} from "src/callbacks/allowlists/MerkleAllowlist.sol";
-import {TokenAllowlist} from "src/callbacks/allowlists/TokenAllowlist.sol";
+import {LinearVesting} from "../../src/modules/derivatives/LinearVesting.sol";
 
 /// @notice Declarative deployment script that reads a deployment sequence (with constructor args)
 ///         and a configured environment file to deploy and install contracts in the Axis protocol.
 contract Deploy is Script, WithEnvironment, WithSalts {
     using stdJson for string;
 
-    string internal constant _PREFIX_AXIS = "axis";
+    string internal constant _PREFIX_DEPLOYMENT_ROOT = "deployments";
+    string internal constant _PREFIX_AUCTION_MODULES = "deployments.auctionModules";
+    string internal constant _PREFIX_DERIVATIVE_MODULES = "deployments.derivativeModules";
 
     bytes internal constant _ATOMIC_AUCTION_HOUSE_NAME = "AtomicAuctionHouse";
     bytes internal constant _BATCH_AUCTION_HOUSE_NAME = "BatchAuctionHouse";
     bytes internal constant _BLAST_ATOMIC_AUCTION_HOUSE_NAME = "BlastAtomicAuctionHouse";
-    bytes internal constant _BLAST_BATCH_AUCTION_HOUSE_NAME = "BlasBatchAuctionHouse";
+    bytes internal constant _BLAST_BATCH_AUCTION_HOUSE_NAME = "BlastBatchAuctionHouse";
 
     // Deploy system storage
     uint256[] public auctionHouseIndexes;
     mapping(string => bytes) public argsMap;
     mapping(string => bool) public installAtomicAuctionHouseMap;
     mapping(string => bool) public installBatchAuctionHouseMap;
+    mapping(string => uint48[2]) public maxFeesMap; // [maxReferrerFee, maxCuratorFee]
     string[] public deployments;
 
     string[] public deployedToKeys;
@@ -108,7 +105,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         for (uint256 i; i < ahLen; i++) {
             uint256 index = auctionHouseIndexes[i];
             string memory name = deployments[index];
-            string memory deploymentKey = string.concat(_PREFIX_AXIS, ".", name);
+            string memory deploymentKey = string.concat(_PREFIX_DEPLOYMENT_ROOT, ".", name);
             deployedToKeys.push(deploymentKey);
 
             if (_isAtomicAuctionHouse(name)) {
@@ -144,30 +141,78 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             deployedToKeys.push(deployedToKey);
             deployedTo[deployedToKey] = deploymentAddress;
 
-            // If required, install in the AtomicAuctionHouse
+            // If required, install in the AtomicAuctionHouse and initialize max fees
             // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
             if (installAtomicAuctionHouseMap[name]) {
+                Module module = Module(deploymentAddress);
+
                 console2.log("");
                 AtomicAuctionHouse atomicAuctionHouse =
-                    AtomicAuctionHouse(_getAddressNotZero("axis.AtomicAuctionHouse"));
+                    AtomicAuctionHouse(_getAddressNotZero("deployments.AtomicAuctionHouse"));
 
                 console2.log("");
                 console2.log("    Installing in AtomicAuctionHouse");
                 vm.broadcast();
-                atomicAuctionHouse.installModule(Module(deploymentAddress));
+                atomicAuctionHouse.installModule(module);
+
+                // Check if module is an auction module, if so, set max fees if required
+                if (module.TYPE() == Module.Type.Auction) {
+                    // Get keycode
+                    Keycode keycode = keycodeFromVeecode(module.VEECODE());
+
+                    // If required, set max fees
+                    uint48[2] memory maxFees = maxFeesMap[name];
+                    if (maxFees[0] != 0 || maxFees[1] != 0) {
+                        console2.log("");
+                        console2.log("    Setting max fees");
+                        vm.broadcast();
+                        atomicAuctionHouse.setFee(
+                            keycode, IFeeManager.FeeType.MaxReferrer, maxFees[0]
+                        );
+
+                        vm.broadcast();
+                        atomicAuctionHouse.setFee(
+                            keycode, IFeeManager.FeeType.MaxCurator, maxFees[1]
+                        );
+                    }
+                }
             }
 
             // If required, install in the BatchAuctionHouse
             // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
             if (installBatchAuctionHouseMap[name]) {
+                Module module = Module(deploymentAddress);
+
                 console2.log("");
                 BatchAuctionHouse batchAuctionHouse =
-                    BatchAuctionHouse(_getAddressNotZero("axis.BatchAuctionHouse"));
+                    BatchAuctionHouse(_getAddressNotZero("deployments.BatchAuctionHouse"));
 
                 console2.log("");
                 console2.log("    Installing in BatchAuctionHouse");
                 vm.broadcast();
-                batchAuctionHouse.installModule(Module(deploymentAddress));
+                batchAuctionHouse.installModule(module);
+
+                // Check if module is an auction module, if so, set max fees if required
+                if (module.TYPE() == Module.Type.Auction) {
+                    // Get keycode
+                    Keycode keycode = keycodeFromVeecode(module.VEECODE());
+
+                    // If required, set max fees
+                    uint48[2] memory maxFees = maxFeesMap[name];
+                    if (maxFees[0] != 0 || maxFees[1] != 0) {
+                        console2.log("");
+                        console2.log("    Setting max fees");
+                        vm.broadcast();
+                        batchAuctionHouse.setFee(
+                            keycode, IFeeManager.FeeType.MaxReferrer, maxFees[0]
+                        );
+
+                        vm.broadcast();
+                        batchAuctionHouse.setFee(
+                            keycode, IFeeManager.FeeType.MaxCurator, maxFees[1]
+                        );
+                    }
+                }
             }
         }
 
@@ -243,9 +288,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying AtomicAuctionHouse");
 
-        address owner = _getAddressNotZero("axis.OWNER");
-        address protocol = _getAddressNotZero("axis.PROTOCOL");
-        address permit2 = _getAddressNotZero("axis.PERMIT2");
+        address owner = _getAddressNotZero("constants.axis.OWNER");
+        address protocol = _getAddressNotZero("constants.axis.PROTOCOL");
+        address permit2 = _getAddressNotZero("constants.axis.PERMIT2");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -275,9 +320,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying BatchAuctionHouse");
 
-        address owner = _getAddressNotZero("axis.OWNER");
-        address protocol = _getAddressNotZero("axis.PROTOCOL");
-        address permit2 = _getAddressNotZero("axis.PERMIT2");
+        address owner = _getAddressNotZero("constants.axis.OWNER");
+        address protocol = _getAddressNotZero("constants.axis.PROTOCOL");
+        address permit2 = _getAddressNotZero("constants.axis.PERMIT2");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -309,7 +354,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying AtomicCatalogue");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -330,7 +375,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    AtomicCatalogue deployed at:", address(atomicCatalogue));
 
-        return (address(atomicCatalogue), _PREFIX_AXIS);
+        return (address(atomicCatalogue), _PREFIX_DEPLOYMENT_ROOT);
     }
 
     function deployBatchCatalogue(bytes memory) public virtual returns (address, string memory) {
@@ -338,7 +383,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying BatchCatalogue");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -359,21 +404,19 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    BatchCatalogue deployed at:", address(batchCatalogue));
 
-        return (address(batchCatalogue), _PREFIX_AXIS);
+        return (address(batchCatalogue), _PREFIX_DEPLOYMENT_ROOT);
     }
 
-    // ========== MODULE DEPLOYMENTS ========== //
+    // ========== AUCTION MODULE DEPLOYMENTS ========== //
 
-    function deployEncryptedMarginalPrice(bytes memory)
-        public
-        virtual
-        returns (address, string memory)
-    {
+    function deployEncryptedMarginalPrice(
+        bytes memory
+    ) public virtual returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying EncryptedMarginalPrice");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -396,7 +439,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    EncryptedMarginalPrice deployed at:", address(amEmp));
 
-        return (address(amEmp), _PREFIX_AXIS);
+        return (address(amEmp), _PREFIX_AUCTION_MODULES);
     }
 
     function deployFixedPriceSale(bytes memory) public virtual returns (address, string memory) {
@@ -404,7 +447,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying FixedPriceSale");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -425,19 +468,48 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    FixedPriceSale deployed at:", address(amFps));
 
-        return (address(amFps), _PREFIX_AXIS);
+        return (address(amFps), _PREFIX_AUCTION_MODULES);
     }
 
-    function deployAtomicLinearVesting(bytes memory)
-        public
-        virtual
-        returns (address, string memory)
-    {
+    function deployFixedPriceBatch(bytes memory) public virtual returns (address, string memory) {
+        // No args used
+        console2.log("");
+        console2.log("Deploying FixedPriceBatch");
+
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
+
+        // Get the salt
+        bytes32 salt_ = _getSalt(
+            "FixedPriceBatch", type(FixedPriceBatch).creationCode, abi.encode(batchAuctionHouse)
+        );
+
+        // Deploy the module
+        FixedPriceBatch amFpb;
+        if (salt_ == bytes32(0)) {
+            vm.broadcast();
+            amFpb = new FixedPriceBatch(batchAuctionHouse);
+        } else {
+            console2.log("    salt:", vm.toString(salt_));
+
+            vm.broadcast();
+            amFpb = new FixedPriceBatch{salt: salt_}(batchAuctionHouse);
+        }
+        console2.log("");
+        console2.log("    FixedPriceBatch deployed at:", address(amFpb));
+
+        return (address(amFpb), _PREFIX_AUCTION_MODULES);
+    }
+
+    // ========== DERIVATIVE MODULE DEPLOYMENTS ========== //
+
+    function deployAtomicLinearVesting(
+        bytes memory
+    ) public virtual returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying LinearVesting (Atomic)");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -458,19 +530,17 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    LinearVesting (Atomic) deployed at:", address(dmAtomicLinearVesting));
 
-        return (address(dmAtomicLinearVesting), _PREFIX_AXIS);
+        return (address(dmAtomicLinearVesting), _PREFIX_DERIVATIVE_MODULES);
     }
 
-    function deployBatchLinearVesting(bytes memory)
-        public
-        virtual
-        returns (address, string memory)
-    {
+    function deployBatchLinearVesting(
+        bytes memory
+    ) public virtual returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying LinearVesting (Batch)");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -491,402 +561,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    LinearVesting (Batch) deployed at:", address(dmBatchLinearVesting));
 
-        return (address(dmBatchLinearVesting), _PREFIX_AXIS);
-    }
-
-    // ========== MODULE DEPLOYMENTS ========== //
-
-    function deployAtomicUniswapV2DirectToLiquidity(bytes memory)
-        public
-        returns (address, string memory)
-    {
-        // No args used
-        console2.log("");
-        console2.log("Deploying UniswapV2DirectToLiquidity (Atomic)");
-
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
-        address uniswapV2Factory = _getAddressNotZero("uniswapV2.factory");
-        address uniswapV2Router = _getAddressNotZero("uniswapV2.router");
-
-        // Get the salt
-        bytes32 salt_ = _getSalt(
-            "UniswapV2DirectToLiquidity",
-            type(UniswapV2DirectToLiquidity).creationCode,
-            abi.encode(atomicAuctionHouse, uniswapV2Factory, uniswapV2Router)
-        );
-
-        // Revert if the salt is not set
-        require(salt_ != bytes32(0), "Salt not set");
-
-        // Deploy the module
-        console2.log("    salt:", vm.toString(salt_));
-
-        vm.broadcast();
-        UniswapV2DirectToLiquidity cbAtomicUniswapV2Dtl = new UniswapV2DirectToLiquidity{
-            salt: salt_
-        }(atomicAuctionHouse, uniswapV2Factory, uniswapV2Router);
-        console2.log("");
-        console2.log(
-            "    UniswapV2DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV2Dtl)
-        );
-
-        return (address(cbAtomicUniswapV2Dtl), _PREFIX_AXIS);
-    }
-
-    function deployBatchUniswapV2DirectToLiquidity(bytes memory)
-        public
-        returns (address, string memory)
-    {
-        // No args used
-        console2.log("");
-        console2.log("Deploying UniswapV2DirectToLiquidity (Batch)");
-
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
-        address uniswapV2Factory = _getAddressNotZero("uniswapV2.factory");
-        address uniswapV2Router = _getAddressNotZero("uniswapV2.router");
-
-        // Get the salt
-        bytes32 salt_ = _getSalt(
-            "UniswapV2DirectToLiquidity",
-            type(UniswapV2DirectToLiquidity).creationCode,
-            abi.encode(batchAuctionHouse, uniswapV2Factory, uniswapV2Router)
-        );
-
-        // Revert if the salt is not set
-        require(salt_ != bytes32(0), "Salt not set");
-
-        // Deploy the module
-        console2.log("    salt:", vm.toString(salt_));
-
-        vm.broadcast();
-        UniswapV2DirectToLiquidity cbBatchUniswapV2Dtl = new UniswapV2DirectToLiquidity{salt: salt_}(
-            batchAuctionHouse, uniswapV2Factory, uniswapV2Router
-        );
-        console2.log("");
-        console2.log(
-            "    UniswapV2DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV2Dtl)
-        );
-
-        return (address(cbBatchUniswapV2Dtl), _PREFIX_AXIS);
-    }
-
-    function deployAtomicUniswapV3DirectToLiquidity(bytes memory)
-        public
-        returns (address, string memory)
-    {
-        // No args used
-        console2.log("");
-        console2.log("Deploying UniswapV3DirectToLiquidity (Atomic)");
-
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
-        address uniswapV3Factory = _getAddressNotZero("uniswapV3.factory");
-        address gUniFactory = _getAddressNotZero("gUni.factory");
-
-        // Get the salt
-        bytes32 salt_ = _getSalt(
-            "UniswapV3DirectToLiquidity",
-            type(UniswapV3DirectToLiquidity).creationCode,
-            abi.encode(atomicAuctionHouse, uniswapV3Factory, gUniFactory)
-        );
-
-        // Revert if the salt is not set
-        require(salt_ != bytes32(0), "Salt not set");
-
-        // Deploy the module
-        console2.log("    salt:", vm.toString(salt_));
-
-        vm.broadcast();
-        UniswapV3DirectToLiquidity cbAtomicUniswapV3Dtl = new UniswapV3DirectToLiquidity{
-            salt: salt_
-        }(atomicAuctionHouse, uniswapV3Factory, gUniFactory);
-        console2.log("");
-        console2.log(
-            "    UniswapV3DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV3Dtl)
-        );
-
-        return (address(cbAtomicUniswapV3Dtl), _PREFIX_AXIS);
-    }
-
-    function deployBatchUniswapV3DirectToLiquidity(bytes memory)
-        public
-        returns (address, string memory)
-    {
-        // No args used
-        console2.log("");
-        console2.log("Deploying UniswapV3DirectToLiquidity (Batch)");
-
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
-        address uniswapV3Factory = _getAddressNotZero("uniswapV3.factory");
-        address gUniFactory = _getAddressNotZero("gUni.factory");
-
-        // Get the salt
-        bytes32 salt_ = _getSalt(
-            "UniswapV3DirectToLiquidity",
-            type(UniswapV3DirectToLiquidity).creationCode,
-            abi.encode(batchAuctionHouse, uniswapV3Factory, gUniFactory)
-        );
-
-        // Revert if the salt is not set
-        require(salt_ != bytes32(0), "Salt not set");
-
-        // Deploy the module
-        console2.log("    salt:", vm.toString(salt_));
-
-        vm.broadcast();
-        UniswapV3DirectToLiquidity cbBatchUniswapV3Dtl = new UniswapV3DirectToLiquidity{salt: salt_}(
-            batchAuctionHouse, uniswapV3Factory, gUniFactory
-        );
-        console2.log("");
-        console2.log(
-            "    UniswapV3DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV3Dtl)
-        );
-
-        return (address(cbBatchUniswapV3Dtl), _PREFIX_AXIS);
-    }
-
-    function deployAtomicCappedMerkleAllowlist(bytes memory)
-        public
-        returns (address, string memory)
-    {
-        // No args used
-        console2.log("");
-        console2.log("Deploying CappedMerkleAllowlist (Atomic)");
-
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
-        Callbacks.Permissions memory permissions = Callbacks.Permissions({
-            onCreate: true,
-            onCancel: false,
-            onCurate: false,
-            onPurchase: true,
-            onBid: true,
-            onSettle: false,
-            receiveQuoteTokens: false,
-            sendBaseTokens: false
-        });
-
-        // Get the salt
-        bytes32 salt_ = _getSalt(
-            "CappedMerkleAllowlist",
-            type(CappedMerkleAllowlist).creationCode,
-            abi.encode(atomicAuctionHouse, permissions)
-        );
-
-        // Revert if the salt is not set
-        require(salt_ != bytes32(0), "Salt not set");
-
-        // Deploy the module
-        console2.log("    salt:", vm.toString(salt_));
-
-        vm.broadcast();
-        CappedMerkleAllowlist cbAtomicCappedMerkleAllowlist =
-            new CappedMerkleAllowlist{salt: salt_}(atomicAuctionHouse, permissions);
-        console2.log("");
-        console2.log(
-            "    CappedMerkleAllowlist (Atomic) deployed at:",
-            address(cbAtomicCappedMerkleAllowlist)
-        );
-
-        return (address(cbAtomicCappedMerkleAllowlist), _PREFIX_AXIS);
-    }
-
-    function deployBatchCappedMerkleAllowlist(bytes memory)
-        public
-        returns (address, string memory)
-    {
-        // No args used
-        console2.log("");
-        console2.log("Deploying CappedMerkleAllowlist (Batch)");
-
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
-        Callbacks.Permissions memory permissions = Callbacks.Permissions({
-            onCreate: true,
-            onCancel: false,
-            onCurate: false,
-            onPurchase: true,
-            onBid: true,
-            onSettle: false,
-            receiveQuoteTokens: false,
-            sendBaseTokens: false
-        });
-
-        // Get the salt
-        bytes32 salt_ = _getSalt(
-            "CappedMerkleAllowlist",
-            type(CappedMerkleAllowlist).creationCode,
-            abi.encode(batchAuctionHouse, permissions)
-        );
-
-        // Revert if the salt is not set
-        require(salt_ != bytes32(0), "Salt not set");
-
-        // Deploy the module
-        console2.log("    salt:", vm.toString(salt_));
-
-        vm.broadcast();
-        CappedMerkleAllowlist cbBatchCappedMerkleAllowlist =
-            new CappedMerkleAllowlist{salt: salt_}(batchAuctionHouse, permissions);
-        console2.log("");
-        console2.log(
-            "    CappedMerkleAllowlist (Batch) deployed at:", address(cbBatchCappedMerkleAllowlist)
-        );
-
-        return (address(cbBatchCappedMerkleAllowlist), _PREFIX_AXIS);
-    }
-
-    function deployAtomicMerkleAllowlist(bytes memory) public returns (address, string memory) {
-        // No args used
-        console2.log("");
-        console2.log("Deploying MerkleAllowlist (Atomic)");
-
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
-        Callbacks.Permissions memory permissions = Callbacks.Permissions({
-            onCreate: true,
-            onCancel: false,
-            onCurate: false,
-            onPurchase: true,
-            onBid: true,
-            onSettle: false,
-            receiveQuoteTokens: false,
-            sendBaseTokens: false
-        });
-
-        // Get the salt
-        bytes32 salt_ = _getSalt(
-            "MerkleAllowlist",
-            type(MerkleAllowlist).creationCode,
-            abi.encode(atomicAuctionHouse, permissions)
-        );
-
-        // Revert if the salt is not set
-        require(salt_ != bytes32(0), "Salt not set");
-
-        // Deploy the module
-        console2.log("    salt:", vm.toString(salt_));
-
-        vm.broadcast();
-        MerkleAllowlist cbAtomicMerkleAllowlist =
-            new MerkleAllowlist{salt: salt_}(atomicAuctionHouse, permissions);
-        console2.log("");
-        console2.log("    MerkleAllowlist (Atomic) deployed at:", address(cbAtomicMerkleAllowlist));
-
-        return (address(cbAtomicMerkleAllowlist), _PREFIX_AXIS);
-    }
-
-    function deployBatchMerkleAllowlist(bytes memory) public returns (address, string memory) {
-        // No args used
-        console2.log("");
-        console2.log("Deploying MerkleAllowlist (Batch)");
-
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
-        Callbacks.Permissions memory permissions = Callbacks.Permissions({
-            onCreate: true,
-            onCancel: false,
-            onCurate: false,
-            onPurchase: true,
-            onBid: true,
-            onSettle: false,
-            receiveQuoteTokens: false,
-            sendBaseTokens: false
-        });
-
-        // Get the salt
-        bytes32 salt_ = _getSalt(
-            "MerkleAllowlist",
-            type(MerkleAllowlist).creationCode,
-            abi.encode(batchAuctionHouse, permissions)
-        );
-
-        // Revert if the salt is not set
-        require(salt_ != bytes32(0), "Salt not set");
-
-        // Deploy the module
-        console2.log("    salt:", vm.toString(salt_));
-
-        vm.broadcast();
-        MerkleAllowlist cbBatchMerkleAllowlist =
-            new MerkleAllowlist{salt: salt_}(batchAuctionHouse, permissions);
-        console2.log("");
-        console2.log("    MerkleAllowlist (Batch) deployed at:", address(cbBatchMerkleAllowlist));
-
-        return (address(cbBatchMerkleAllowlist), _PREFIX_AXIS);
-    }
-
-    function deployAtomicTokenAllowlist(bytes memory) public returns (address, string memory) {
-        // No args used
-        console2.log("");
-        console2.log("Deploying TokenAllowlist (Atomic)");
-
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
-        Callbacks.Permissions memory permissions = Callbacks.Permissions({
-            onCreate: true,
-            onCancel: false,
-            onCurate: false,
-            onPurchase: true,
-            onBid: true,
-            onSettle: false,
-            receiveQuoteTokens: false,
-            sendBaseTokens: false
-        });
-
-        // Get the salt
-        bytes32 salt_ = _getSalt(
-            "TokenAllowlist",
-            type(TokenAllowlist).creationCode,
-            abi.encode(atomicAuctionHouse, permissions)
-        );
-
-        // Revert if the salt is not set
-        require(salt_ != bytes32(0), "Salt not set");
-
-        // Deploy the module
-        console2.log("    salt:", vm.toString(salt_));
-
-        vm.broadcast();
-        TokenAllowlist cbAtomicTokenAllowlist =
-            new TokenAllowlist{salt: salt_}(atomicAuctionHouse, permissions);
-        console2.log("");
-        console2.log("    TokenAllowlist (Atomic) deployed at:", address(cbAtomicTokenAllowlist));
-
-        return (address(cbAtomicTokenAllowlist), _PREFIX_AXIS);
-    }
-
-    function deployBatchTokenAllowlist(bytes memory) public returns (address, string memory) {
-        // No args used
-        console2.log("");
-        console2.log("Deploying TokenAllowlist (Batch)");
-
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
-        Callbacks.Permissions memory permissions = Callbacks.Permissions({
-            onCreate: true,
-            onCancel: false,
-            onCurate: false,
-            onPurchase: true,
-            onBid: true,
-            onSettle: false,
-            receiveQuoteTokens: false,
-            sendBaseTokens: false
-        });
-
-        // Get the salt
-        bytes32 salt_ = _getSalt(
-            "TokenAllowlist",
-            type(TokenAllowlist).creationCode,
-            abi.encode(batchAuctionHouse, permissions)
-        );
-
-        // Revert if the salt is not set
-        require(salt_ != bytes32(0), "Salt not set");
-
-        // Deploy the module
-        console2.log("    salt:", vm.toString(salt_));
-
-        vm.broadcast();
-        TokenAllowlist cbBatchTokenAllowlist =
-            new TokenAllowlist{salt: salt_}(batchAuctionHouse, permissions);
-        console2.log("");
-        console2.log("    TokenAllowlist (Batch) deployed at:", address(cbBatchTokenAllowlist));
-
-        return (address(cbBatchTokenAllowlist), _PREFIX_AXIS);
+        return (address(dmBatchLinearVesting), _PREFIX_DERIVATIVE_MODULES);
     }
 
     // ========== HELPER FUNCTIONS ========== //
@@ -921,6 +596,21 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         // Check if it should be installed in the BatchAuctionHouse
         if (_readDataBoolean(data_, name_, "installBatchAuctionHouse")) {
             installBatchAuctionHouseMap[name_] = true;
+        }
+
+        // Check if max fees need to be initialized
+        uint48[2] memory maxFees;
+        bytes memory maxReferrerFee = _readDataValue(data_, name_, "maxReferrerFee");
+        bytes memory maxCuratorFee = _readDataValue(data_, name_, "maxCuratorFee");
+        maxFees[0] = maxReferrerFee.length > 0
+            ? abi.decode(_readDataValue(data_, name_, "maxReferrerFee"), (uint48))
+            : 0;
+        maxFees[1] = maxCuratorFee.length > 0
+            ? abi.decode(_readDataValue(data_, name_, "maxCuratorFee"), (uint48))
+            : 0;
+
+        if (maxFees[0] != 0 || maxFees[1] != 0) {
+            maxFeesMap[name_] = maxFees;
         }
     }
 

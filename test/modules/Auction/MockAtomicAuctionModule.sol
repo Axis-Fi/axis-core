@@ -2,11 +2,11 @@
 pragma solidity 0.8.19;
 
 // Modules
-import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
+import {Veecode, toKeycode, wrapVeecode} from "../../../src/modules/Modules.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
-import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
+import {AuctionModule} from "../../../src/modules/Auction.sol";
+import {AtomicAuctionModule} from "../../../src/modules/auctions/AtomicAuctionModule.sol";
 
 contract MockAtomicAuctionModule is AtomicAuctionModule {
     mapping(uint256 => uint256) public payoutData;
@@ -49,7 +49,7 @@ contract MockAtomicAuctionModule is AtomicAuctionModule {
         if (payoutData[lotId_] == 0) {
             payout = uint96(adjustedAmount);
         } else {
-            payout = uint96((payoutData[lotId_] * adjustedAmount) / 1e5);
+            payout = uint96((payoutData[lotId_] * adjustedAmount) / 100e2);
         }
 
         // Reduce capacity

@@ -2,25 +2,25 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IFeeManager} from "src/interfaces/IFeeManager.sol";
+import {IFeeManager} from "../interfaces/IFeeManager.sol";
 
 // Internal libraries
-import {Transfer} from "src/lib/Transfer.sol";
+import {Transfer} from "../lib/Transfer.sol";
 
 // External libraries
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
-import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
+import {ReentrancyGuard} from "@solmate-6.7.0/utils/ReentrancyGuard.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
-import {Keycode} from "src/modules/Keycode.sol";
+import {Keycode} from "../modules/Keycode.sol";
 
 /// @title      FeeManager
 /// @notice     Defines fees for auctions and manages the collection and distribution of fees
 abstract contract FeeManager is IFeeManager, ReentrancyGuard {
     // ========== STATE VARIABLES ========== //
 
-    /// @notice     Fees are in basis points (3 decimals). 1% equals 1000.
-    uint48 internal constant _FEE_DECIMALS = 1e5;
+    /// @notice     Fees are in basis points (hundredths of a percent). 1% equals 100.
+    uint48 internal constant _FEE_DECIMALS = 100e2;
 
     /// @notice     Address the protocol receives fees at
     address internal _protocol;
@@ -86,14 +86,16 @@ abstract contract FeeManager is IFeeManager, ReentrancyGuard {
     }
 
     /// @inheritdoc IFeeManager
-    function getFees(Keycode auctionType_)
+    function getFees(
+        Keycode auctionType_
+    )
         external
         view
         override
-        returns (uint48 protocol, uint48 referrer, uint48 maxCuratorFee)
+        returns (uint48 protocol, uint48 maxReferrerFee, uint48 maxCuratorFee)
     {
         Fees storage fee = fees[auctionType_];
-        return (fee.protocol, fee.referrer, fee.maxCuratorFee);
+        return (fee.protocol, fee.maxReferrerFee, fee.maxCuratorFee);
     }
 
     /// @inheritdoc IFeeManager

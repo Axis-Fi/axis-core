@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import {Point} from "src/lib/ECIES.sol";
+import {Point} from "../../../lib/ECIES.sol";
 
 /// @title  IEncryptedMarginalPrice
 /// @notice Interface for encrypted marginal price (batch) auctions
@@ -16,16 +16,27 @@ interface IEncryptedMarginalPrice {
 
     // ========== EVENTS ========== //
 
+    /// @notice Emitted when a bid is decrypted
+    ///
+    /// @param  lotId       The lot ID
+    /// @param  bidId       The bid ID
+    /// @param  amountIn    The amount in
+    /// @param  amountOut   The amount out
     event BidDecrypted(
         uint96 indexed lotId, uint64 indexed bidId, uint96 amountIn, uint96 amountOut
     );
+
+    /// @notice Emitted when the private key for an auction lot is submitted
+    ///
+    /// @param  lotId       The lot ID
+    event PrivateKeySubmitted(uint96 indexed lotId);
 
     // ========== DATA STRUCTURES ========== //
 
     /// @notice         Parameters that are used to set auction-specific data
     ///
     /// @param          minPrice            The minimum price (in quote tokens) that a bid must fulfill
-    /// @param          minFillPercent      The minimum percentage of capacity that the lot must fill in order to settle. Maximum value = 100_000 = 1e5.
+    /// @param          minFillPercent      The minimum percentage of capacity that the lot must fill in order to settle. Maximum value = 10000 = 100e2.
     /// @param          minBidSize          The minimum size of a bid in quote tokens
     /// @param          publicKey           The public key used to encrypt bids
     struct AuctionDataParams {
@@ -185,18 +196,16 @@ interface IEncryptedMarginalPrice {
     ///
     /// @param  lotId_          The lot ID
     /// @return auctionData_    The `AuctionData`
-    function getAuctionData(uint96 lotId_)
-        external
-        view
-        returns (AuctionData memory auctionData_);
+    function getAuctionData(
+        uint96 lotId_
+    ) external view returns (AuctionData memory auctionData_);
 
     /// @notice Returns the `PartialFill` data for an auction lot
     ///
     /// @param  lotId_          The lot ID
     /// @return hasPartialFill  True if a partial fill exists
     /// @return partialFill     The `PartialFill` data
-    function getPartialFill(uint96 lotId_)
-        external
-        view
-        returns (bool hasPartialFill, PartialFill memory partialFill);
+    function getPartialFill(
+        uint96 lotId_
+    ) external view returns (bool hasPartialFill, PartialFill memory partialFill);
 }

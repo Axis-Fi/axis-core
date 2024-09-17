@@ -2,13 +2,13 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAtomicAuction} from "src/interfaces/modules/IAtomicAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {IFeeManager} from "src/interfaces/IFeeManager.sol";
-import {IAtomicCatalogue} from "src/interfaces/IAtomicCatalogue.sol";
+import {IAtomicAuction} from "./interfaces/modules/IAtomicAuction.sol";
+import {IAuctionHouse} from "./interfaces/IAuctionHouse.sol";
+import {IFeeManager} from "./interfaces/IFeeManager.sol";
+import {IAtomicCatalogue} from "./interfaces/IAtomicCatalogue.sol";
 
 // Base contracts
-import {Catalogue} from "src/bases/Catalogue.sol";
+import {Catalogue} from "./bases/Catalogue.sol";
 
 /// @notice Contract that provides view and aggregation functions for atomic auctions without having to know the specific auction module address
 contract AtomicCatalogue is IAtomicCatalogue, Catalogue {
@@ -31,7 +31,7 @@ contract AtomicCatalogue is IAtomicCatalogue, Catalogue {
             IFeeManager(auctionHouse).calculateQuoteFees(protocolFee, referrerFee, true, amount_);
 
         // Get payout from module
-        return module.payoutFor(lotId_, amount_ - uint96(toProtocol) - uint96(toReferrer));
+        return module.payoutFor(lotId_, amount_ - toProtocol - toReferrer);
     }
 
     /// @inheritdoc IAtomicCatalogue

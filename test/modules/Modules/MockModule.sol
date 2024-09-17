@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Contracts
-import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
+import {Module, Veecode, toKeycode, wrapVeecode} from "../../../src/modules/Modules.sol";
 
 contract MockModuleV1 is Module {
     constructor(address _owner) Module(_owner) {}

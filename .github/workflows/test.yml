@@ -1,10 +1,10 @@
 name: test
 
 on:
-    push:
-        branches:
-            - master
-    pull_request:
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
   check:
@@ -14,18 +14,18 @@ jobs:
     name: Foundry project
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
-          submodules: recursive
+          version: 9
 
-      - uses: actions/setup-node@v2
-
-      - uses: pnpm/action-setup@v2
-        with:
-            version: 8
-
-      - name: Install Node dependencies
-        run: pnpm install
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
 
       # From: https://www.uffizzi.com/blog/optimizing-rust-builds-for-faster-github-actions-pipelines
       - name: Install Rust
@@ -42,26 +42,30 @@ jobs:
 
       - name: Configure sccache
         run: |
-            echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
-            echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
 
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
 
-      - name: Build local ecies-cli for use with testing
-        run: cd crates/ecies-cli && cargo build && cd ../..
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - name: Install Dependencies
+        run: |
+          pnpm install
+        shell: bash
 
       - name: Run lint check
         run: pnpm run lint:check
 
-      - name: Run Forge build
+      - name: Build Solidity Contracts
         run: |
           forge --version
           forge build
         id: build
+
+      - name: Build ECIES CLI
+        run: |
+          pnpm run build:ecies-cli
+        id: build-ecies-cli
 
       - name: Run Forge tests
         run: |

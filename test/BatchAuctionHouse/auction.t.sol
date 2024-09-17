@@ -2,16 +2,16 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
-import {Transfer} from "src/lib/Transfer.sol";
+import {BatchAuctionHouseTest} from "./AuctionHouseTest.sol";
+import {Transfer} from "../../src/lib/Transfer.sol";
 
 // Mocks
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
+import {MockAtomicAuctionModule} from "../modules/Auction/MockAtomicAuctionModule.sol";
+import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
 
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
+import {ICallback} from "../../src/interfaces/ICallback.sol";
 import {
     Veecode,
     keycodeFromVeecode,
@@ -19,7 +19,7 @@ import {
     WithModules,
     wrapVeecode,
     fromVeecode
-} from "src/modules/Modules.sol";
+} from "../../src/modules/Modules.sol";
 
 contract BatchCreateAuctionTest is BatchAuctionHouseTest {
     MockAtomicAuctionModule internal _atomicAuctionModule;
@@ -58,6 +58,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
     // [X] reverts when base token is 0
     // [X] reverts when quote token is 0
     // [X] reverts when the auction type is not batch
+    // [ ] reverts when the referrer fee is greater than the max referrer fee for the auction type
     // [X] given the curator fee would cause an overflow
     //  [X] it reverts
     // [X] creates the auction lot
@@ -126,11 +127,9 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
-    function test_whenBaseTokenDecimalsAreOutOfBounds_reverts(uint8 decimals_)
-        external
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-    {
+    function test_whenBaseTokenDecimalsAreOutOfBounds_reverts(
+        uint8 decimals_
+    ) external whenAuctionTypeIsBatch whenBatchAuctionModuleIsInstalled {
         uint8 decimals = uint8(bound(decimals_, 0, 50));
         vm.assume(decimals < 6 || decimals > 18);
 
@@ -148,11 +147,9 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
-    function test_whenQuoteTokenDecimalsAreOutOfBounds_reverts(uint8 decimals_)
-        external
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-    {
+    function test_whenQuoteTokenDecimalsAreOutOfBounds_reverts(
+        uint8 decimals_
+    ) external whenAuctionTypeIsBatch whenBatchAuctionModuleIsInstalled {
         uint8 decimals = uint8(bound(decimals_, 0, 50));
         vm.assume(decimals < 6 || decimals > 18);
 
@@ -226,6 +223,24 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
             type(uint96).max,
             "auction house balance mismatch"
         );
+    }
+
+    function test_whenReferrerFeeGreaterThanMax_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenMaxReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFee(_REFERRER_MAX_FEE_PERCENT + 1)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
     function test_success()
@@ -877,6 +892,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorIsSet
         givenCuratorMaxFeeIsSet
@@ -916,6 +932,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorIsSet
         givenCuratorMaxFeeIsSet

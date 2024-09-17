@@ -1,0 +1,13 @@
+{
+  "axis.BatchAuctionHouse": "0xBA00000D23A0793d5601d1e8E7B32aE88642cbEF",
+  "axis.BatchCatalogue": "0xcE56d3E3E145b44597B61E99c64cb82FB209Da04",
+  "axis.EncryptedMarginalPrice": "0xA7413717C633175Bc5B669E94625a4d3FE009870",
+  "axis.FixedPriceBatch": "0xC818f1f000f9C24D014BCe2c5334e14B1360d9CD",
+  "axis.BatchLinearVesting": "0x4042D4F2236D055212d485E028E8FE4939252F88",
+  "axis.BatchCappedMerkleAllowlist": "0x98a27160E2879334AaE4415E24C1feaa3D111392",
+  "axis.BatchMerkleAllowlist": "0x987e7515985887092582Cc4ea94be837a99C0b02",
+  "axis.BatchTokenAllowlist": "0x989a21D82D86e4934D3B8E94043F13Fb1C312F8a",
+  "axis.BatchAllocatedMerkleAllowlist": "0x987E2DB8E83c57Ad9aDf808e5394d77f72b49ab4",
+  "axis.BatchUniswapV2DirectToLiquidity": "0xE6F478d800e9807efAb601a1CD60BBd7CBA1c0b8",
+  "axis.BatchUniswapV3DirectToLiquidity": "0xE6BC347aA7Ce46bDb45F938605C5d4b88881bB1c"
+}

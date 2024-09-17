@@ -2,17 +2,17 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
-import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
+import {IBatchAuction} from "../../../interfaces/modules/IBatchAuction.sol";
+import {IFixedPriceBatch} from "../../../interfaces/modules/auctions/IFixedPriceBatch.sol";
 
 // External libraries
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {AuctionModule} from "../../Auction.sol";
+import {BatchAuctionModule} from "../BatchAuctionModule.sol";
 
-import {Module, Veecode, toVeecode} from "src/modules/Modules.sol";
+import {Module, Veecode, toVeecode} from "../../Modules.sol";
 
 /// @title  FixedPriceBatch
 /// @notice A module for creating fixed price batch auctions
@@ -57,7 +57,7 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     ///             This function reverts if:
     ///             - The parameters cannot be decoded into the correct format
     ///             - The price is zero
-    ///             - The minimum fill percentage is greater than 100%
+    ///             - The minimum fill percentage is greater than
     ///
     /// @param      params_    ABI-encoded data of type `AuctionDataParams`
     function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal override {
@@ -191,6 +191,15 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
 
             // Decrement the total bid amount by the refund
             data.totalBidAmount -= _lotPartialFill[lotId_].refund;
+
+            // Calculate the updated filled capacity
+            uint256 filledCapacity = Math.fullMulDiv(data.totalBidAmount, baseScale, data.price);
+
+            // Compare this with minimum filled and update if needed
+            // We do this to ensure that slight rounding errors do not cause
+            // the auction to not clear when the capacity is actually filled
+            // This generally can only happen when the min fill is 100%
+            if (filledCapacity < data.minFilled) data.minFilled = filledCapacity;
         }
 
         // End the auction
@@ -353,12 +362,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     /// @inheritdoc IFixedPriceBatch
     /// @dev        This function reverts if:
     ///             - The lot ID is invalid
-    function getAuctionData(uint96 lotId_)
-        external
-        view
-        override
-        returns (AuctionData memory auctionData_)
-    {
+    function getAuctionData(
+        uint96 lotId_
+    ) external view override returns (AuctionData memory auctionData_) {
         _revertIfLotInvalid(lotId_);
 
         return _auctionData[lotId_];
@@ -370,11 +376,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     ///             This function reverts if:
     ///             - The lot ID is invalid
     ///             - The lot is not settled
-    function getPartialFill(uint96 lotId_)
-        external
-        view
-        returns (bool hasPartialFill, PartialFill memory partialFill)
-    {
+    function getPartialFill(
+        uint96 lotId_
+    ) external view returns (bool hasPartialFill, PartialFill memory partialFill) {
         _revertIfLotInvalid(lotId_);
         _revertIfLotNotSettled(lotId_);
 

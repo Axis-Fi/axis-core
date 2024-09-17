@@ -2,36 +2,35 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {IFeeManager} from "src/interfaces/IFeeManager.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
+import {IAtomicAuctionHouse} from "../../src/interfaces/IAtomicAuctionHouse.sol";
+import {ICallback} from "../../src/interfaces/ICallback.sol";
+import {IFeeManager} from "../../src/interfaces/IFeeManager.sol";
 
 // Internal libraries
-import {Callbacks} from "src/lib/Callbacks.sol";
-import {Transfer} from "src/lib/Transfer.sol";
+import {Callbacks} from "../../src/lib/Callbacks.sol";
+import {Transfer} from "../../src/lib/Transfer.sol";
 
 // External libraries
-import {Test} from "forge-std/Test.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
 // Mocks
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
-import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
-import {MockCallback} from "test/callbacks/MockCallback.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
-import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
+import {MockAtomicAuctionModule} from "../modules/Auction/MockAtomicAuctionModule.sol";
+import {MockDerivativeModule} from "../modules/derivatives/mocks/MockDerivativeModule.sol";
+import {MockCondenserModule} from "../modules/Condenser/MockCondenserModule.sol";
+import {MockCallback} from "../callbacks/MockCallback.sol";
+import {Permit2User} from "../lib/permit2/Permit2User.sol";
+import {MockFeeOnTransferERC20} from "../lib/mocks/MockFeeOnTransferERC20.sol";
 
 // Auctions
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {AuctionModule} from "src/modules/Auction.sol";
+import {AtomicAuctionHouse} from "../../src/AtomicAuctionHouse.sol";
+import {AuctionModule} from "../../src/modules/Auction.sol";
 
-import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Keycode.sol";
+import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "../../src/modules/Keycode.sol";
 
-import {WithSalts} from "test/lib/WithSalts.sol";
-import {TestSaltConstants} from "script/salts/TestSaltConstants.sol";
+import {WithSalts} from "../lib/WithSalts.sol";
 
 abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSaltConstants {
     MockFeeOnTransferERC20 internal _baseToken;
@@ -67,8 +66,11 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSa
 
     uint24 internal constant _PROTOCOL_FEE_PERCENT = 100;
     uint24 internal constant _REFERRER_FEE_PERCENT = 105;
-    uint24 internal _protocolFeePercentActual;
+    uint24 internal constant _REFERRER_MAX_FEE_PERCENT = 1000;
     uint24 internal _referrerFeePercentActual;
+
+    uint24 internal _protocolFeePercentActual;
+    uint24 internal _maxReferrerFeePercentActual;
 
     uint256 internal _curatorMaxPotentialFee;
     bool internal _curatorApproved;
@@ -130,6 +132,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSa
             auctionType: toKeycode(""),
             baseToken: address(_baseToken),
             quoteToken: address(_quoteToken),
+            referrerFee: 0, // Default to 0
             curator: _CURATOR,
             callbacks: ICallback(address(0)),
             callbackData: abi.encode(""),
@@ -460,11 +463,37 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSa
         _;
     }
 
+    function _setMaxReferrerFee(uint24 fee_) internal {
+        vm.prank(_OWNER);
+        _auctionHouse.setFee(_auctionModuleKeycode, IFeeManager.FeeType.MaxReferrer, fee_);
+        _maxReferrerFeePercentActual = fee_;
+    }
+
+    modifier givenMaxReferrerFeeIsSet() {
+        _setMaxReferrerFee(_REFERRER_MAX_FEE_PERCENT);
+        _;
+    }
+
+    function _setReferrerFee(uint24 fee_) internal {
+        _referrerFeePercentActual = fee_;
+        _routingParams.referrerFee = fee_;
+    }
+
+    modifier givenReferrerFee(uint24 fee_) {
+        _setReferrerFee(fee_);
+        _;
+    }
+
+    modifier givenReferrerFeeIsSet() {
+        _setReferrerFee(_REFERRER_FEE_PERCENT);
+        _;
+    }
+
     function _setCuratorFee(uint24 fee_) internal {
         vm.prank(_CURATOR);
         _auctionHouse.setCuratorFee(_auctionModuleKeycode, fee_);
         _curatorFeePercentActual = fee_;
-        _curatorMaxPotentialFee = _curatorFeePercentActual * _LOT_CAPACITY / 1e5;
+        _curatorMaxPotentialFee = _curatorFeePercentActual * _LOT_CAPACITY / 100e2;
     }
 
     modifier givenCuratorFeeIsSet() {
@@ -487,17 +516,6 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSa
 
     modifier givenProtocolFeeIsSet() {
         _setProtocolFee(_PROTOCOL_FEE_PERCENT);
-        _;
-    }
-
-    function _setReferrerFee(uint24 fee_) internal {
-        vm.prank(_OWNER);
-        _auctionHouse.setFee(_auctionModuleKeycode, IFeeManager.FeeType.Referrer, fee_);
-        _referrerFeePercentActual = fee_;
-    }
-
-    modifier givenReferrerFeeIsSet() {
-        _setReferrerFee(_REFERRER_FEE_PERCENT);
         _;
     }
 

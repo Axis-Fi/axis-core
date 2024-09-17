@@ -2,21 +2,22 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
-import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
+import {IBatchAuction} from "../../../interfaces/modules/IBatchAuction.sol";
+import {IEncryptedMarginalPrice} from
+    "../../../interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 // Internal libraries
-import {ECIES, Point} from "src/lib/ECIES.sol";
-import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue.sol";
+import {ECIES, Point} from "../../../lib/ECIES.sol";
+import {MaxPriorityQueue, Queue} from "../../../lib/MaxPriorityQueue.sol";
 
 // External libraries
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {AuctionModule} from "../../Auction.sol";
+import {BatchAuctionModule} from "../BatchAuctionModule.sol";
 
-import {Module, Veecode, toVeecode} from "src/modules/Modules.sol";
+import {Module, Veecode, toVeecode} from "../../Modules.sol";
 
 /// @notice     Encrypted Marginal Price
 /// @dev        This batch auction module allows for bids to be encrypted off-chain, then stored, decrypted and settled on-chain.
@@ -409,6 +410,8 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
 
         // Decrypt and sort bids
         _decryptAndSortBids(lotId_, num_, sortHints_);
+
+        emit PrivateKeySubmitted(lotId_);
     }
 
     /// @inheritdoc IEncryptedMarginalPrice
@@ -889,12 +892,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     /// @inheritdoc IEncryptedMarginalPrice
     /// @dev        This function reverts if:
     ///             - The lot ID is invalid
-    function getAuctionData(uint96 lotId_)
-        external
-        view
-        override
-        returns (AuctionData memory auctionData_)
-    {
+    function getAuctionData(
+        uint96 lotId_
+    ) external view override returns (AuctionData memory auctionData_) {
         _revertIfLotInvalid(lotId_);
 
         return auctionData[lotId_];
@@ -906,11 +906,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     ///             This function reverts if:
     ///             - The lot ID is invalid
     ///             - The lot is not settled
-    function getPartialFill(uint96 lotId_)
-        external
-        view
-        returns (bool hasPartialFill, PartialFill memory partialFill)
-    {
+    function getPartialFill(
+        uint96 lotId_
+    ) external view returns (bool hasPartialFill, PartialFill memory partialFill) {
         _revertIfLotInvalid(lotId_);
         _revertIfLotNotSettled(lotId_);
 

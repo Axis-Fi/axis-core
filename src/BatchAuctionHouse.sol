@@ -2,24 +2,24 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
-import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
+import {IAuction} from "./interfaces/modules/IAuction.sol";
+import {ICallback} from "./interfaces/ICallback.sol";
+import {IBatchAuction} from "./interfaces/modules/IBatchAuction.sol";
+import {IBatchAuctionHouse} from "./interfaces/IBatchAuctionHouse.sol";
 
 // Internal libraries
-import {Transfer} from "src/lib/Transfer.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
+import {Transfer} from "./lib/Transfer.sol";
+import {Callbacks} from "./lib/Callbacks.sol";
 
 // External libraries
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 
 // Auctions
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {AuctionModule} from "src/modules/Auction.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {AuctionHouse} from "./bases/AuctionHouse.sol";
+import {AuctionModule} from "./modules/Auction.sol";
+import {BatchAuctionModule} from "./modules/auctions/BatchAuctionModule.sol";
 
-import {fromVeecode} from "src/modules/Keycode.sol";
+import {fromVeecode} from "./modules/Keycode.sol";
 
 /// @title      BatchAuctionHouse
 /// @notice     As its name implies, the BatchAuctionHouse is where batch auctions are created, bid on, and settled. The core protocol logic is implemented here.
@@ -324,7 +324,6 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
                     protocolFee,
                     referrerFee,
                     bidClaim.referrer,
-                    routing.seller,
                     quoteToken,
                     bidClaim.paid - bidClaim.refund // refund is included in paid
                 );
@@ -467,6 +466,16 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
     ///             - Validates the lot id
     ///             - Aborts the auction on the auction module
     ///             - Refunds prefunding (in base tokens) to the seller
+    ///             - Calls the onCancel callback
+    ///
+    ///             This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The auction module reverts when aborting the auction
+    ///             - The refund amount is zero
+    ///
+    ///             Note that this function will not revert if the `onCancel` callback reverts.
+    ///
+    /// @param      lotId_   The lot ID to abort
     function abort(uint96 lotId_) external override nonReentrant {
         // Validation
         _isLotValid(lotId_);
@@ -489,6 +498,27 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
             refund,
             false
         );
+
+        // If there is a callback configured, call the onCancel callback
+        // This is necessary as an auction lot configured with a callback that
+        // sends base tokens will have the base tokens sent to the callback contract.
+        // Calling onCancel offers the opportunity for the auction owner to handle
+        // the refund of the base tokens.
+        if (lotRouting[lotId_].callbacks != ICallback(address(0))) {
+            // Assemble the calldata
+            bytes memory onCancelCalldata = abi.encodeWithSelector(
+                ICallback.onCancel.selector,
+                lotId_,
+                refund,
+                lotRouting[lotId_].callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG),
+                abi.encode("")
+            );
+
+            // Call the onCancel callback, but ignore the return value
+            // As it is a low-level call, it will not revert on failure
+            // This prevents an auction owner from blocking an abort by reverting in the callback
+            address(lotRouting[lotId_].callbacks).call(onCancelCalldata);
+        }
 
         emit Abort(lotId_);
     }

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
+import {Module} from "../../../../src/modules/Modules.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {EncryptedMarginalPrice} from "../../../../src/modules/auctions/batch/EMP.sol";
+import {IEncryptedMarginalPrice} from
+    "../../../../src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
-import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
+import {EmpTest} from "./EMPTest.sol";
 
 contract EmpCreateAuctionTest is EmpTest {
     // [X] when the caller is not the parent
@@ -72,7 +73,7 @@ contract EmpCreateAuctionTest is EmpTest {
         _createAuctionLot();
     }
 
-    function test_minFillAboveMax_reverts() public givenMinimumFillPercentage(1e5 + 1) {
+    function test_minFillAboveMax_reverts() public givenMinimumFillPercentage(100e2 + 1) {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
@@ -152,7 +153,7 @@ contract EmpCreateAuctionTest is EmpTest {
         assertEq(auctionData.minPrice, _scaleQuoteTokenAmount(_MIN_PRICE), "minPrice");
         assertEq(auctionData.nextDecryptIndex, 0, "nextDecryptIndex");
         assertEq(
-            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
+            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 100e2
         );
         assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
@@ -188,7 +189,7 @@ contract EmpCreateAuctionTest is EmpTest {
         assertEq(auctionData.minPrice, _scaleQuoteTokenAmount(_MIN_PRICE), "minPrice");
         assertEq(auctionData.nextDecryptIndex, 0, "nextDecryptIndex");
         assertEq(
-            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
+            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 100e2
         );
         assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
@@ -224,7 +225,7 @@ contract EmpCreateAuctionTest is EmpTest {
         assertEq(auctionData.minPrice, _scaleQuoteTokenAmount(_MIN_PRICE), "minPrice");
         assertEq(auctionData.nextDecryptIndex, 0, "nextDecryptIndex");
         assertEq(
-            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
+            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 100e2
         );
         assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(

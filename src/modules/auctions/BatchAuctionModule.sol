@@ -2,11 +2,11 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
+import {IAuction} from "../../interfaces/modules/IAuction.sol";
+import {IBatchAuction} from "../../interfaces/modules/IBatchAuction.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
+import {AuctionModule} from "../Auction.sol";
 
 /// @title  Batch Auction Module
 /// @notice A base contract for batch auctions

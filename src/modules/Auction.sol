@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {Module} from "src/modules/Modules.sol";
+import {IAuction} from "../interfaces/modules/IAuction.sol";
+import {Module} from "./Modules.sol";
 
 abstract contract AuctionModule is IAuction, Module {
     // ========= STATE ========== //
 
-    /// @notice Constant for percentages
-    /// @dev    1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
-    uint48 internal constant _ONE_HUNDRED_PERCENT = 100_000;
+    /// @notice Constant for percentages, in basis points
+    /// @dev    1% = 1_00 or 1e2. 100% = 100_00 or 100e2 or 1e4.
+    uint48 internal constant _ONE_HUNDRED_PERCENT = 100e2;
 
     /// @inheritdoc IAuction
     uint48 public minAuctionDuration;

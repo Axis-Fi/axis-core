@@ -2,15 +2,15 @@
 pragma solidity 0.8.19;
 
 // Auctions
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
 
-import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
+import {AtomicAuctionHouseTest} from "./AuctionHouseTest.sol";
 
 contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
     uint256 internal constant _PURCHASE_AMOUNT = 2e18;
     uint256 internal constant _PURCHASE_AMOUNT_OUT = 1e18;
-    uint32 internal constant _PAYOUT_MULTIPLIER = 50_000; // 50%
+    uint32 internal constant _PAYOUT_MULTIPLIER = 5000; // 50%
 
     bytes internal _purchaseAuctionData = abi.encode("");
 
@@ -47,12 +47,9 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
         _auctionHouse.cancel(_lotId, bytes(""));
     }
 
-    function testReverts_whenUnauthorized(address user_)
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
-    {
+    function testReverts_whenUnauthorized(
+        address user_
+    ) external whenAuctionTypeIsAtomic whenAtomicAuctionModuleIsInstalled givenLotIsCreated {
         vm.assume(user_ != _SELLER);
 
         bytes memory err = abi.encodeWithSelector(IAuctionHouse.NotPermitted.selector, user_);

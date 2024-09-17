@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 
-import {BaseCallback} from "src/callbacks/BaseCallback.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
+import {BaseCallback} from "../../src/bases/BaseCallback.sol";
+import {Callbacks} from "../../src/lib/Callbacks.sol";
 
 contract MockCallback is BaseCallback {
     constructor(
@@ -60,7 +60,7 @@ contract MockCallback is BaseCallback {
 
         if (prefund_) {
             if (onCreateMultiplier > 0) {
-                capacity_ = uint96(uint256(capacity_) * onCreateMultiplier / 1e5);
+                capacity_ = uint96(uint256(capacity_) * onCreateMultiplier / 100e2);
             }
 
             // Transfer the base tokens to the auction house
@@ -90,7 +90,7 @@ contract MockCallback is BaseCallback {
 
         if (prefund_) {
             if (onCurateMultiplier > 0) {
-                curatorFee_ = uint96(uint256(curatorFee_) * onCurateMultiplier / 1e5);
+                curatorFee_ = uint96(uint256(curatorFee_) * onCurateMultiplier / 100e2);
             }
 
             // Transfer the base tokens to the auction house
@@ -120,9 +120,10 @@ contract MockCallback is BaseCallback {
 
         if (prefunded_) {
             // Do nothing, as tokens have already been transferred
-        } else {
+        }
+        else {
             if (onPurchaseMultiplier > 0) {
-                payout_ = uint96(uint256(payout_) * onPurchaseMultiplier / 1e5);
+                payout_ = uint96(uint256(payout_) * onPurchaseMultiplier / 100e2);
             }
 
             // Transfer the base tokens to the auction house

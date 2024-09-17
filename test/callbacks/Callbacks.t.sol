@@ -1,23 +1,22 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import {Callbacks} from "src/lib/Callbacks.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
+import {Callbacks} from "../../src/lib/Callbacks.sol";
+import {ICallback} from "../../src/interfaces/ICallback.sol";
 
-import {MockCallback} from "test/callbacks/MockCallback.sol";
+import {MockCallback} from "./MockCallback.sol";
 
-import {Test} from "forge-std/Test.sol";
-import {WithSalts} from "test/lib/WithSalts.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {WithSalts} from "../lib/WithSalts.sol";
 
 contract CallbacksTest is Test, WithSalts {
     using Callbacks for ICallback;
 
     address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
 
-    function _getMockCallbackSalt(Callbacks.Permissions memory permissions_)
-        internal
-        returns (bytes32)
-    {
+    function _getMockCallbackSalt(
+        Callbacks.Permissions memory permissions_
+    ) internal returns (bytes32) {
         bytes memory args = abi.encode(_AUCTION_HOUSE, permissions_);
         return _getTestSalt("MockCallback", type(MockCallback).creationCode, args);
     }

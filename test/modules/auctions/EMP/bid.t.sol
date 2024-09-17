@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {Point} from "src/lib/ECIES.sol";
+import {Module} from "../../../../src/modules/Modules.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {IEncryptedMarginalPrice} from
+    "../../../../src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
+import {EncryptedMarginalPrice} from "../../../../src/modules/auctions/batch/EMP.sol";
+import {Point} from "../../../../src/lib/ECIES.sol";
 
-import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
+import {EmpTest} from "./EMPTest.sol";
 
 contract EmpBidTest is EmpTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
@@ -251,11 +252,9 @@ contract EmpBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
     }
 
-    function test_bidAmountGreaterThanUint96Max_reverts(uint256 amountIn_)
-        public
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function test_bidAmountGreaterThanUint96Max_reverts(
+        uint256 amountIn_
+    ) public givenLotIsCreated givenLotHasStarted {
         uint256 amountIn = bound(amountIn_, uint256(2 ** 96), type(uint256).max);
 
         // Prepare the inputs

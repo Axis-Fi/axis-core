@@ -2,23 +2,21 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
+import {IAuction} from "./interfaces/modules/IAuction.sol";
+import {IAtomicAuctionHouse} from "./interfaces/IAtomicAuctionHouse.sol";
+import {ICallback} from "./interfaces/ICallback.sol";
 
 // External libraries
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 
 // Internal libaries
-import {Transfer} from "src/lib/Transfer.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
+import {Transfer} from "./lib/Transfer.sol";
+import {Callbacks} from "./lib/Callbacks.sol";
 
 // Auction
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {AuctionModule} from "src/modules/Auction.sol";
-import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
-
-import {Keycode, keycodeFromVeecode} from "src/modules/Keycode.sol";
+import {AuctionHouse} from "./bases/AuctionHouse.sol";
+import {AuctionModule} from "./modules/Auction.sol";
+import {AtomicAuctionModule} from "./modules/auctions/AtomicAuctionModule.sol";
 
 /// @title      AtomicAuctionHouse
 /// @notice     As its name implies, the AtomicAuctionHouse is where atomic auction lots are created and purchased. The core protocol logic is implemented here.
@@ -79,7 +77,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
 
     // ========== PURCHASE ========== //
 
-    /// @dev        This fuction handles the following:
+    /// @dev        This function handles the following:
     ///             1. Calculates the fees for the purchase
     ///             2. Obtains the payout from the auction module
     ///             3. Transfers the purchase amount (quote token) from the caller
@@ -112,15 +110,13 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
         Routing storage routing = lotRouting[params_.lotId];
 
         // Calculate quote fees for purchase
-        // Note: this enables protocol and referrer fees to be changed between purchases
+        // Fees were cached on auction creation, so they are consistent for an auction
         uint256 amountLessFees;
         {
-            Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
             uint256 totalFees = _allocateQuoteFees(
-                fees[auctionKeycode].protocol,
-                fees[auctionKeycode].referrer,
+                lotFees[params_.lotId].protocolFee,
+                lotFees[params_.lotId].referrerFee,
                 params_.referrer,
-                routing.seller,
                 ERC20(routing.quoteToken),
                 params_.amount
             );

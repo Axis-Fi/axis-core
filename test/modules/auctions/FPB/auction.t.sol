@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 
-import {FpbTest} from "test/modules/auctions/FPB/FPBTest.sol";
+import {Module} from "../../../../src/modules/Modules.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {IFixedPriceBatch} from "../../../../src/interfaces/modules/auctions/IFixedPriceBatch.sol";
+
+import {FpbTest} from "./FPBTest.sol";
 
 contract FpbCreateAuctionTest is FpbTest {
     // [X] when the caller is not the parent
@@ -66,7 +67,7 @@ contract FpbCreateAuctionTest is FpbTest {
         _createAuctionLot();
     }
 
-    function test_minFillPercentageGreaterThan100_reverts() public givenMinFillPercent(1e5 + 1) {
+    function test_minFillPercentageGreaterThan100_reverts() public givenMinFillPercent(100e2 + 1) {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
@@ -92,14 +93,14 @@ contract FpbCreateAuctionTest is FpbTest {
         _setCapacity(capacity);
         uint256 price = bound(price_, 1, type(uint256).max);
         _setPrice(price);
-        uint24 minFillPercent = uint24(bound(minFillPercent_, 0, 1e5));
+        uint24 minFillPercent = uint24(bound(minFillPercent_, 0, 100e2));
         _setMinFillPercent(minFillPercent);
 
         // Call the function
         _createAuctionLot();
 
         // Round up to be conservative
-        uint256 minFilled = Math.fullMulDivUp(capacity, minFillPercent, 1e5);
+        uint256 minFilled = Math.fullMulDivUp(capacity, minFillPercent, 100e2);
 
         // Assert state
         IAuction.Lot memory lotData = _module.getLot(_lotId);

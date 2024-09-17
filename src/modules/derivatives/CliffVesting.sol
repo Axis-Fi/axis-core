@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-// import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
-// import {ERC20} from "solmate/tokens/ERC20.sol";
-// import "src/modules/Derivative.sol";
+// import {ClonesWithImmutableArgs} from "@clones-with-immutable-args-1.1.1/ClonesWithImmutableArgs.sol";
+// import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
+// import "./Derivative.sol";
 
 // // TODO this only uses the ERC20 clones, need to convert to ERC6909 with optional ERC20 via wrapping the ERC6909
 // contract CliffVesting is DerivativeModule {

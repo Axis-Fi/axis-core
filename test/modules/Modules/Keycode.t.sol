@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Test} from "forge-std/Test.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
 
 import {
     Keycode,
@@ -13,7 +13,7 @@ import {
     unwrapVeecode,
     ensureValidVeecode,
     InvalidVeecode
-} from "src/modules/Modules.sol";
+} from "../../../src/modules/Modules.sol";
 
 contract KeycodeTest is Test {
     function test_keycode() external {

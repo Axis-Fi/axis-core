@@ -2,12 +2,12 @@
 pragma solidity >=0.8.0;
 
 // Interfaces
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
+import {IAuction} from "./modules/IAuction.sol";
+import {ICallback} from "./ICallback.sol";
+import {IDerivative} from "./modules/IDerivative.sol";
 
 // Internal dependencies
-import {Keycode, Veecode} from "src/modules/Keycode.sol";
+import {Keycode, Veecode} from "../modules/Keycode.sol";
 
 /// @title  IAuctionHouse
 /// @notice Interface for the Axis AuctionHouse contracts
@@ -51,6 +51,7 @@ interface IAuctionHouse {
     /// @param      baseToken           Token provided by seller. Declared as an address to avoid dependency hell.
     /// @param      quoteToken          Token to accept as payment. Declared as an address to avoid dependency hell.
     /// @param      curator             (optional) Address of the proposed curator
+    /// @param      referrerFee         (optional) Percent of bid/purchase amount received paid to a referrer in basis points, i.e. 1% = 100.
     /// @param      callbacks           (optional) Callbacks implementation for extended functionality
     /// @param      callbackData        (optional) abi-encoded data to be sent to the onCreate callback function
     /// @param      derivativeType      (optional) Derivative type, represented by the Keycode for the derivative submodule
@@ -61,6 +62,7 @@ interface IAuctionHouse {
         address baseToken;
         address quoteToken;
         address curator;
+        uint48 referrerFee;
         ICallback callbacks;
         bytes callbackData;
         Keycode derivativeType;
@@ -150,7 +152,9 @@ interface IAuctionHouse {
     /// @dev        See the `Routing` struct for more information
     ///
     /// @param      lotId   ID of the auction lot
-    function lotRouting(uint96 lotId)
+    function lotRouting(
+        uint96 lotId
+    )
         external
         view
         returns (
@@ -169,7 +173,9 @@ interface IAuctionHouse {
     /// @dev        See the `FeeData` struct for more information
     ///
     /// @param      lotId   ID of the auction lot
-    function lotFees(uint96 lotId)
+    function lotFees(
+        uint96 lotId
+    )
         external
         view
         returns (

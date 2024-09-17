@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {ERC6909} from "solmate/tokens/ERC6909.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
-import {Timestamp} from "src/lib/Timestamp.sol";
-import {ERC6909Metadata} from "src/lib/ERC6909Metadata.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
+import {SafeTransferLib} from "@solmate-6.7.0/utils/SafeTransferLib.sol";
+import {ClonesWithImmutableArgs} from
+    "@clones-with-immutable-args-1.1.1/ClonesWithImmutableArgs.sol";
+import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {Base64} from "@openzeppelin-contracts-4.9.2/utils/Base64.sol";
 
-import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
-import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
-import {DerivativeModule} from "src/modules/Derivative.sol";
-import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
-import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
+import {Timestamp} from "../../lib/Timestamp.sol";
+import {ERC6909Metadata} from "../../lib/ERC6909Metadata.sol";
+
+import {IDerivative} from "../../interfaces/modules/IDerivative.sol";
+import {ILinearVesting} from "../../interfaces/modules/derivatives/ILinearVesting.sol";
+import {DerivativeModule} from "../../modules/Derivative.sol";
+import {Module, Veecode, toKeycode, wrapVeecode} from "../../modules/Modules.sol";
+import {SoulboundCloneERC20} from "../../modules/derivatives/SoulboundCloneERC20.sol";
+import {LinearVestingCard} from "../../modules/derivatives/LinearVestingCard.sol";
 
 /// @title      LinearVesting
 /// @notice     A derivative module that allows for the creation of linearly vesting tokens
@@ -23,7 +26,7 @@ import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.s
 ///
 ///             The start timestamp enables vesting tokens to have a cliff, after which vesting commences.
 /// @author     Axis Finance
-contract LinearVesting is DerivativeModule, ILinearVesting {
+contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
     using SafeTransferLib for ERC20;
     using ClonesWithImmutableArgs for address;
     using Timestamp for uint48;
@@ -41,7 +44,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
 
     // ========== MODULE SETUP ========== //
 
-    constructor(address parent_) Module(parent_) {
+    constructor(address parent_) Module(parent_) LinearVestingCard() {
         // Deploy the clone implementation
         _IMPLEMENTATION = address(new SoulboundCloneERC20());
     }
@@ -72,13 +75,13 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
 
     // ========== TRANSFER ========== //
 
-    /// @inheritdoc ERC6909
+    /// @notice     Transfers are disabled
     /// @dev        Vesting tokens are soulbound/not transferable
     function transfer(address, uint256, uint256) public virtual override returns (bool) {
         revert NotPermitted();
     }
 
-    /// @inheritdoc ERC6909
+    /// @notice     Transfers are disabled
     /// @dev        Vesting tokens are soulbound/not transferable
     function transferFrom(
         address,
@@ -89,7 +92,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
         revert NotPermitted();
     }
 
-    /// @inheritdoc ERC6909
+    /// @notice     Transfers are disabled
     /// @dev        Vesting tokens are soulbound/not transferable
     function approve(address, uint256, uint256) public virtual override returns (bool) {
         revert NotPermitted();
@@ -163,7 +166,12 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
             SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(token_.wrapped);
             wrappedToken.mint(to_, amount_);
         } else {
-            // Otherwise mint the normal derivative token
+            // Increment the supply
+            unchecked {
+                token_.supply += amount_;
+            }
+
+            // Mint the normal derivative token
             _mint(to_, tokenId_, amount_);
         }
     }
@@ -265,6 +273,9 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
 
         // Burn the unwrapped tokens
         if (derivativeToBurn > 0) {
+            unchecked {
+                tokenData.supply -= derivativeToBurn;
+            }
             _burn(user_, tokenId_, derivativeToBurn);
         }
         // Burn the wrapped tokens - will be 0 if not wrapped
@@ -394,6 +405,11 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
 
         if (balanceOf[msg.sender][tokenId_] < amount_) revert InsufficientBalance();
 
+        // Decrement supply on this contract, since it's tracked on the ERC20
+        unchecked {
+            tokenMetadata[tokenId_].supply -= amount_;
+        }
+
         // Burn the derivative token
         _burn(msg.sender, tokenId_, amount_);
 
@@ -422,6 +438,11 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
         SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(token.wrapped);
 
         if (wrappedToken.balanceOf(msg.sender) < amount_) revert InsufficientBalance();
+
+        // Increment supply on this contract
+        unchecked {
+            token.supply += amount_;
+        }
 
         // Burn the wrapped derivative token
         wrappedToken.burn(msg.sender, amount_);
@@ -478,13 +499,18 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
 
     // ========== VIEW FUNCTIONS ========== //
 
+    function _getTokenMetadata(
+        uint256 tokenId_
+    ) internal view returns (ERC20, VestingParams memory) {
+        Token storage token = tokenMetadata[tokenId_];
+
+        return (ERC20(token.underlyingToken), abi.decode(token.data, (VestingParams)));
+    }
+
     /// @inheritdoc ILinearVesting
-    function getTokenVestingParams(uint256 tokenId_)
-        external
-        view
-        onlyValidTokenId(tokenId_)
-        returns (VestingParams memory)
-    {
+    function getTokenVestingParams(
+        uint256 tokenId_
+    ) external view onlyValidTokenId(tokenId_) returns (VestingParams memory) {
         return abi.decode(tokenMetadata[tokenId_].data, (VestingParams));
     }
 
@@ -507,11 +533,9 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
 
     /// @notice     Decodes the ABI-encoded `VestingParams` for a derivative token
     /// @dev        This function will revert if the parameters are not the correct length
-    function _decodeVestingParams(bytes memory params_)
-        internal
-        pure
-        returns (VestingParams memory)
-    {
+    function _decodeVestingParams(
+        bytes memory params_
+    ) internal pure returns (VestingParams memory) {
         if (params_.length != _VESTING_PARAMS_LEN) revert InvalidParams();
 
         return abi.decode(params_, (VestingParams));
@@ -637,49 +661,85 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
     /// @inheritdoc ERC6909Metadata
     /// @dev        This function reverts if:
     ///             - The token ID does not exist
-    function name(uint256 tokenId_)
-        public
-        view
-        override
-        onlyValidTokenId(tokenId_)
-        returns (string memory)
-    {
-        Token storage token = tokenMetadata[tokenId_];
-        VestingParams memory data = abi.decode(token.data, (VestingParams));
+    function name(
+        uint256 tokenId_
+    ) public view override onlyValidTokenId(tokenId_) returns (string memory) {
+        // Get the token data
+        (ERC20 underlyingToken, VestingParams memory data) = _getTokenMetadata(tokenId_);
 
-        (string memory name_,) = _computeNameAndSymbol(ERC20(token.underlyingToken), data.expiry);
+        (string memory name_,) = _computeNameAndSymbol(underlyingToken, data.expiry);
         return name_;
     }
 
     /// @inheritdoc ERC6909Metadata
     /// @dev        This function reverts if:
     ///             - The token ID does not exist
-    function symbol(uint256 tokenId_)
-        public
-        view
-        override
-        onlyValidTokenId(tokenId_)
-        returns (string memory)
-    {
-        Token storage token = tokenMetadata[tokenId_];
-        VestingParams memory data = abi.decode(token.data, (VestingParams));
+    function symbol(
+        uint256 tokenId_
+    ) public view override onlyValidTokenId(tokenId_) returns (string memory) {
+        // Get the token data
+        (ERC20 underlyingToken, VestingParams memory data) = _getTokenMetadata(tokenId_);
 
-        (, string memory symbol_) = _computeNameAndSymbol(ERC20(token.underlyingToken), data.expiry);
+        (, string memory symbol_) = _computeNameAndSymbol(underlyingToken, data.expiry);
         return symbol_;
     }
 
     /// @inheritdoc ERC6909Metadata
     /// @dev        This function reverts if:
     ///             - The token ID does not exist
-    function decimals(uint256 tokenId_)
-        public
-        view
-        override
-        onlyValidTokenId(tokenId_)
-        returns (uint8)
-    {
-        Token storage token = tokenMetadata[tokenId_];
+    function decimals(
+        uint256 tokenId_
+    ) public view override onlyValidTokenId(tokenId_) returns (uint8) {
+        // Get the token data
+        (ERC20 underlyingToken,) = _getTokenMetadata(tokenId_);
 
-        return ERC20(token.underlyingToken).decimals();
+        return underlyingToken.decimals();
+    }
+
+    // ========== ERC6909 CONTENT EXTENSION ========== //
+
+    /// @inheritdoc ERC6909Metadata
+    /// @dev        This function reverts if:
+    ///             - The token ID does not exist
+    function tokenURI(
+        uint256 tokenId_
+    ) public view override onlyValidTokenId(tokenId_) returns (string memory) {
+        // Get the token data
+        (ERC20 underlyingToken, VestingParams memory data) = _getTokenMetadata(tokenId_);
+
+        // Get the underlying token symbol
+        string memory _symbol = underlyingToken.symbol();
+
+        // Create token info for rendering token card
+        Info memory info = Info({
+            tokenId: tokenId_,
+            baseToken: address(underlyingToken),
+            baseTokenSymbol: _symbol,
+            start: data.start,
+            expiry: data.expiry,
+            supply: totalSupply(tokenId_)
+        });
+
+        // Return the token URI
+        // solhint-disable quotes
+        return string.concat(
+            "data:application/json;base64,",
+            Base64.encode(
+                bytes(
+                    string.concat(
+                        '{"name": "',
+                        name(tokenId_),
+                        '", "description": "',
+                        _symbol,
+                        ' Soulbound Linear Vesting Derivative Token. Powered by Axis.", "attributes": ',
+                        _attributes(info),
+                        ', "image": "data:image/svg+xml;base64,',
+                        Base64.encode(bytes(_render(info))),
+                        '"}'
+                    )
+                )
+            )
+        );
+        // solhint-enable quotes
     }
 }

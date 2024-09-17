@@ -2,19 +2,20 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
-import {Point, ECIES} from "src/lib/ECIES.sol";
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
+import {Point, ECIES} from "../../../../src/lib/ECIES.sol";
+import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 
 // Mocks
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {Permit2User} from "../../../lib/permit2/Permit2User.sol";
 
 // Modules
-import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
+import {BatchAuctionHouse} from "../../../../src/BatchAuctionHouse.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {EncryptedMarginalPrice} from "../../../../src/modules/auctions/batch/EMP.sol";
+import {IEncryptedMarginalPrice} from
+    "../../../../src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 abstract contract EmpTest is Test, Permit2User {
     uint256 internal constant _BASE_SCALE = 1e18;
@@ -26,7 +27,7 @@ abstract contract EmpTest is Test, Permit2User {
     uint256 internal constant _LOT_CAPACITY = 10e18;
     uint48 internal constant _DURATION = 1 days;
     uint256 internal constant _MIN_PRICE = 1e18;
-    uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
+    uint24 internal constant _MIN_FILL_PERCENT = 25e2; // 25%
     uint256 internal constant _MIN_BID_SIZE = 1e15; // 0.001 quote tokens
 
     uint256 internal constant _AUCTION_PRIVATE_KEY = 112_233_445_566;
@@ -374,11 +375,9 @@ abstract contract EmpTest is Test, Permit2User {
         return Math.fullMulDiv(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
     }
 
-    function _getAuctionData(uint96 lotId_)
-        internal
-        view
-        returns (EncryptedMarginalPrice.AuctionData memory)
-    {
+    function _getAuctionData(
+        uint96 lotId_
+    ) internal view returns (EncryptedMarginalPrice.AuctionData memory) {
         (
             uint64 nextBidId_,
             uint64 nextDecryptIndex_,
@@ -411,11 +410,9 @@ abstract contract EmpTest is Test, Permit2User {
         return _module.getLot(lotId_);
     }
 
-    function _getPartialFill(uint96 lotId_)
-        internal
-        view
-        returns (EncryptedMarginalPrice.PartialFill memory)
-    {
+    function _getPartialFill(
+        uint96 lotId_
+    ) internal view returns (EncryptedMarginalPrice.PartialFill memory) {
         (, EncryptedMarginalPrice.PartialFill memory partialFill) = _module.getPartialFill(lotId_);
 
         return partialFill;

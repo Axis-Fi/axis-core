@@ -1,9 +1,9 @@
 /// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Script} from "forge-std/Script.sol";
-import {console2} from "forge-std/console2.sol";
-import {stdJson} from "forge-std/StdJson.sol";
+import {Script} from "@forge-std-1.9.1/Script.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
+import {stdJson} from "@forge-std-1.9.1/StdJson.sol";
 
 contract WithSalts is Script {
     using stdJson for string;
@@ -90,6 +90,19 @@ contract WithSalts is Script {
         _setSalt(bytecodePath_, prefix_, string.concat("Test_", saltKey_), bytecodeHash_);
     }
 
+    /// @notice Same as `_setSalt()`, but prefixes the salt key with "Test_" so they are co-located and separate from production salts.
+    function _setTestSaltWithDeployer(
+        string memory bytecodePath_,
+        string memory prefix_,
+        string memory saltKey_,
+        bytes32 bytecodeHash_,
+        address deployer_
+    ) internal {
+        _setSaltWithDeployer(
+            bytecodePath_, prefix_, string.concat("Test_", saltKey_), bytecodeHash_, deployer_
+        );
+    }
+
     /// @notice Calls a script to generate and write the salt for a given bytecode
     ///
     /// @param  bytecodePath_   The path to the bytecode
@@ -103,12 +116,42 @@ contract WithSalts is Script {
         bytes32 bytecodeHash_
     ) internal {
         // Call the salts script to generate and write the salt
-        string[] memory inputs = new string[](5);
+        string[] memory inputs = new string[](9);
         inputs[0] = "./script/salts/write_salt.sh";
-        inputs[1] = bytecodePath_;
-        inputs[2] = prefix_;
-        inputs[3] = saltKey_;
-        inputs[4] = vm.toString(bytecodeHash_);
+        inputs[1] = "--bytecodeFile";
+        inputs[2] = bytecodePath_;
+        inputs[3] = "--prefix";
+        inputs[4] = prefix_;
+        inputs[5] = "--saltKey";
+        inputs[6] = saltKey_;
+        inputs[7] = "--bytecodeHash";
+        inputs[8] = vm.toString(bytecodeHash_);
+
+        vm.ffi(inputs);
+
+        console2.log("Salt set for", saltKey_, "with prefix", prefix_);
+    }
+
+    function _setSaltWithDeployer(
+        string memory bytecodePath_,
+        string memory prefix_,
+        string memory saltKey_,
+        bytes32 bytecodeHash_,
+        address deployer_
+    ) internal {
+        // Call the salts script to generate and write the salt
+        string[] memory inputs = new string[](11);
+        inputs[0] = "./script/salts/write_salt.sh";
+        inputs[1] = "--bytecodeFile";
+        inputs[2] = bytecodePath_;
+        inputs[3] = "--prefix";
+        inputs[4] = prefix_;
+        inputs[5] = "--saltKey";
+        inputs[6] = saltKey_;
+        inputs[7] = "--bytecodeHash";
+        inputs[8] = vm.toString(bytecodeHash_);
+        inputs[9] = "--deployer";
+        inputs[10] = vm.toString(deployer_);
 
         vm.ffi(inputs);
 

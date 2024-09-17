@@ -2,14 +2,14 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {Test} from "forge-std/Test.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
 
 // Mocks
-import {MockWithModules} from "test/modules/Modules/MockWithModules.sol";
-import {MockModuleV1} from "test/modules/Modules/MockModule.sol";
+import {MockWithModules} from "./MockWithModules.sol";
+import {MockModuleV1} from "./MockModule.sol";
 
 // Contracts
-import {WithModules, toKeycode, fromKeycode} from "src/modules/Modules.sol";
+import {WithModules, toKeycode, fromKeycode} from "../../../src/modules/Modules.sol";
 
 contract SunsetModuleTest is Test {
     WithModules internal _withModules;

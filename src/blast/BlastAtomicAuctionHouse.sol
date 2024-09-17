@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {BlastAuctionHouse} from "src/blast/BlastAuctionHouse.sol";
+import {AtomicAuctionHouse} from "../AtomicAuctionHouse.sol";
+import {BlastAuctionHouse} from "./BlastAuctionHouse.sol";
 
 contract BlastAtomicAuctionHouse is AtomicAuctionHouse, BlastAuctionHouse {
     // ========== CONSTRUCTOR ========== //
