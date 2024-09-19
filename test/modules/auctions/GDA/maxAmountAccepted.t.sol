@@ -42,6 +42,67 @@ contract GdaMaxAmountAcceptedTest is GdaTest {
         assertEq(expectedAmount, maxAmountAccepted);
     }
 
+    function testFuzz_maxAmountAccepted_minPriceNonZero_success_smallerQuoteDecimals(
+        uint128 capacity_,
+        uint128 price_
+    )
+        public
+        givenQuoteTokenDecimals(6)
+        givenDuration(1 days)
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinIsHalfPrice(price_)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+    {
+        uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
+        uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
+        assertEq(expectedAmount, maxAmountAccepted);
+    }
+
+    function testFuzz_maxAmountAccepted_minPriceNonZero_success_smallerBaseDecimals(
+        uint128 capacity_,
+        uint128 price_
+    )
+        public
+        givenBaseTokenDecimals(6)
+        givenDuration(1 days)
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinIsHalfPrice(price_)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+    {
+        uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
+        uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
+        assertEq(expectedAmount, maxAmountAccepted);
+    }
+
+    function testFuzz_maxAmountAccepted_minPriceNonZero_success_bothSmallerDecimals(
+        uint96 capacity_,
+        uint96 price_
+    )
+        public
+        givenQuoteTokenDecimals(9)
+        givenBaseTokenDecimals(9)
+        givenDuration(1 days)
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinIsHalfPrice(price_)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+    {
+        uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
+        uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
+        assertEq(expectedAmount, maxAmountAccepted);
+    }
+
     function testFuzz_maxAmountAccepted_minPriceZero_success(
         uint128 capacity_,
         uint128 price_

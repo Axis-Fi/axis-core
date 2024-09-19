@@ -247,6 +247,7 @@ contract GdaPurchaseTest is GdaTest {
 
         // Normalize the amount
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
+        vm.assume(maxAmountAccepted > 100); // Tiny maxAmountAccepted values cause large rounding errors which make the capacity insufficient
         uint256 amount = amount_ % (maxAmountAccepted + 1);
 
         // Calculate expected values
@@ -305,6 +306,43 @@ contract GdaPurchaseTest is GdaTest {
     )
         public
         givenBaseTokenDecimals(6)
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinIsHalfPrice(price_)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        console2.log("Capacity:", capacity_);
+        console2.log("Price:", price_);
+
+        // Normalize the amount
+        uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
+        uint256 amount = amount_ % (maxAmountAccepted + 1);
+
+        // Calculate expected values
+        uint256 expectedPayout = _module.payoutFor(_lotId, amount);
+
+        // Call the function
+        _createPurchase(amount, expectedPayout);
+
+        // Assert the capacity, purchased and sold
+        IAuction.Lot memory lot = _getAuctionLot(_lotId);
+        assertEq(lot.capacity, uint256(capacity_) - expectedPayout, "capacity");
+        assertEq(lot.purchased, amount, "purchased");
+        assertEq(lot.sold, expectedPayout, "sold");
+    }
+
+    function testFuzz_minPriceNonZero_varyingSetup_bothSmallerDecimals(
+        uint256 amount_,
+        uint96 capacity_,
+        uint96 price_
+    )
+        public
+        givenQuoteTokenDecimals(9)
+        givenBaseTokenDecimals(9)
         givenLotCapacity(capacity_)
         givenEquilibriumPrice(price_)
         givenMinIsHalfPrice(price_)

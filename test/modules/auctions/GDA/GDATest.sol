@@ -39,7 +39,7 @@ abstract contract GdaTest is Test, Permit2User {
 
     // Input parameters (modified by modifiers)
     uint48 internal _start;
-    uint96 internal _lotId = type(uint96).max;
+    uint96 internal _lotId = 0;
     IAuction.AuctionParams internal _auctionParams;
     GradualDutchAuction.GDAParams internal _gdaParams;
 
