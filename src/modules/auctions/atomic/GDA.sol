@@ -337,8 +337,8 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         // In the auction creation, we checked that the equilibrium price is greater than the minimum price
         // Scale the result to 18 decimals
         uint256 quoteTokenScale = 10 ** lot.quoteTokenDecimals;
-        UD60x18 priceDiff = ud(
-            (auction.equilibriumPrice - auction.minimumPrice).mulDiv(uUNIT, quoteTokenScale)
+        UD60x18 priceDiff = ud(auction.equilibriumPrice - auction.minimumPrice).div(
+            ud(quoteTokenScale)
         ).mul(auction.emissionsRate);
 
         // Calculate the second numerator factor: e^((k*P)/r) - 1
@@ -416,6 +416,8 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
 
         // Check that payout does not exceed remaining capacity
         if (payout > lotData[lotId_].capacity) {
+            console2.log("payout:", payout);
+            console2.log("capacity:", lotData[lotId_].capacity);
             revert Auction_InsufficientCapacity();
         }
 
