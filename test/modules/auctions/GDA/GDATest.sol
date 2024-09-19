@@ -3,8 +3,8 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "@forge-std-1.9.1/Test.sol";
-import {UD60x18, ud, uUNIT, ZERO} from "../../../../lib/prb-math/src/UD60x18.sol";
-import "../../../../lib/prb-math/src/Common.sol" as PRBMath;
+import {UD60x18, ud, uUNIT, ZERO} from "prb-math-4.0-axis/UD60x18.sol";
+import "prb-math-4.0-axis/Common.sol" as PRBMath;
 
 // Mocks
 import {Permit2User} from "../../../lib/permit2/Permit2User.sol";

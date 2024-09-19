@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import {UD60x18} from "lib/prb-math/src/UD60x18.sol";
+import {UD60x18} from "prb-math-4.0-axis/UD60x18.sol";
 import {IAtomicAuction} from "src/interfaces/modules/IAtomicAuction.sol";
 
 /// @notice Interface for gradual dutch (atomic) auctions

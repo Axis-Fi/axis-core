@@ -17,8 +17,8 @@ import {
     EXP_MAX_INPUT,
     ZERO,
     HALF_UNIT
-} from "../../../../lib/prb-math/src/UD60x18.sol";
-import "../../../../lib/prb-math/src/Common.sol" as PRBMath;
+} from "prb-math-4.0-axis/UD60x18.sol";
+import "prb-math-4.0-axis/Common.sol" as PRBMath;
 
 import {console2} from "@forge-std-1.9.1/console2.sol";
 

@@ -2,8 +2,8 @@
 pragma solidity 0.8.19;
 
 import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
-import {uUNIT} from "../../../../lib/prb-math/src/UD60x18.sol";
-import "../../../../lib/prb-math/src/Common.sol" as PRBMath;
+import {uUNIT} from "prb-math-4.0-axis/UD60x18.sol";
+import "prb-math-4.0-axis/Common.sol" as PRBMath;
 
 import {GdaTest} from "./GDATest.sol";
 

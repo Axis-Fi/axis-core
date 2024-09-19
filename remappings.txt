@@ -3,4 +3,4 @@
 @openzeppelin-contracts-4.9.2=dependencies/@openzeppelin-contracts-4.9.2
 @solady-0.0.124=dependencies/solady-0.0.124/src
 @solmate-6.7.0=dependencies/solmate-6.7.0/src
-prb-math-4.0-axis/=dependencies/prb-math-4.0-axis/
+prb-math-4.0-axis/=dependencies/prb-math-4.0-axis/src

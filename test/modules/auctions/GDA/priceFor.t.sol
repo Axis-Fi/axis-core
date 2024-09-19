@@ -13,8 +13,8 @@ import {
     UNIT,
     uUNIT,
     EXP_MAX_INPUT
-} from "../../../../lib/prb-math/src/UD60x18.sol";
-import "../../../../lib/prb-math/src/Common.sol" as PRBMath;
+} from "prb-math-4.0-axis/UD60x18.sol";
+import "prb-math-4.0-axis/Common.sol" as PRBMath;
 
 import {GdaTest} from "./GDATest.sol";
 import {console2} from "@forge-std-1.9.1/console2.sol";
