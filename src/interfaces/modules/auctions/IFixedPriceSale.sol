@@ -43,5 +43,7 @@ interface IFixedPriceSale {
     /// @param  lotId       The lot ID
     /// @return price       The fixed price of the lot
     /// @return maxPayout   The maximum payout per purchase, in terms of the base token
-    function auctionData(uint96 lotId) external view returns (uint256 price, uint256 maxPayout);
+    function auctionData(
+        uint96 lotId
+    ) external view returns (uint256 price, uint256 maxPayout);
 }

@@ -7,13 +7,7 @@ import {IGradualDutchAuction} from
     "../../../../src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 
 import {
-    UD60x18,
-    ud,
-    convert,
-    UNIT,
-    uUNIT,
-    ZERO,
-    EXP_MAX_INPUT
+    UD60x18, ud, convert, UNIT, uUNIT, ZERO, EXP_MAX_INPUT
 } from "prb-math-4.0-axis/UD60x18.sol";
 import "prb-math-4.0-axis/Common.sol" as PRBMath;
 
@@ -45,7 +39,9 @@ contract GdaPayoutForTest is GdaTest {
     //   [X] it does not overflow
     // TODO can we fuzz this better?
 
-    function testFuzz_lotIdInvalid_reverts(uint96 lotId_) public {
+    function testFuzz_lotIdInvalid_reverts(
+        uint96 lotId_
+    ) public {
         // No lots have been created so all lots are invalid
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, lotId_);
         vm.expectRevert(err);

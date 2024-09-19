@@ -314,7 +314,9 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _;
     }
 
-    modifier givenAuctionHouseHasQuoteTokenBalance(uint256 amount_) {
+    modifier givenAuctionHouseHasQuoteTokenBalance(
+        uint256 amount_
+    ) {
         _quoteToken.mint(address(_auctionHouse), amount_);
         _;
     }

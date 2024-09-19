@@ -42,7 +42,9 @@ interface IBatchAuction is IAuction {
     /// @dev        Stored during settlement
     ///
     /// @param      lotId   The lot ID
-    function lotAuctionOutput(uint96 lotId) external view returns (bytes memory);
+    function lotAuctionOutput(
+        uint96 lotId
+    ) external view returns (bytes memory);
 
     // ========== BATCH OPERATIONS ========== //
 
@@ -129,7 +131,9 @@ interface IBatchAuction is IAuction {
     ///            - Set the auction in a state that allows bidders to claim refunds
     ///
     /// @param     lotId_    The lot id
-    function abort(uint96 lotId_) external;
+    function abort(
+        uint96 lotId_
+    ) external;
 
     // ========== VIEW FUNCTIONS ========== //
 
@@ -137,7 +141,9 @@ interface IBatchAuction is IAuction {
     ///
     /// @param  lotId_  The lot ID
     /// @return numBids The number of bids
-    function getNumBids(uint96 lotId_) external view returns (uint256 numBids);
+    function getNumBids(
+        uint96 lotId_
+    ) external view returns (uint256 numBids);
 
     /// @notice Get the bid IDs from the given index
     ///

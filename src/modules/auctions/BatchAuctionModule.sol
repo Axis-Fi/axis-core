@@ -244,7 +244,9 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///             - The lot has not concluded
     ///             - The lot is in the dedicated settle period
     ///             - The lot is settled (after which it cannot be aborted)
-    function abort(uint96 lotId_) external virtual override onlyInternal {
+    function abort(
+        uint96 lotId_
+    ) external virtual override onlyInternal {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotConcluded(lotId_);
@@ -261,11 +263,15 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///             - Updating auction-specific data
     ///
     /// @param      lotId_  The lot ID
-    function _abort(uint96 lotId_) internal virtual;
+    function _abort(
+        uint96 lotId_
+    ) internal virtual;
 
     // ========== ADMIN CONFIGURATION ========== //
 
-    function setDedicatedSettlePeriod(uint48 period_) external onlyParent {
+    function setDedicatedSettlePeriod(
+        uint48 period_
+    ) external onlyParent {
         // Dedicated settle period cannot be more than 7 days
         if (period_ > 7 days) revert Auction_InvalidParams();
 
@@ -279,14 +285,18 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///             Inheriting contracts must override this to implement custom logic
     ///
     /// @param      lotId_  The lot ID
-    function _revertIfLotSettled(uint96 lotId_) internal view virtual;
+    function _revertIfLotSettled(
+        uint96 lotId_
+    ) internal view virtual;
 
     /// @notice     Checks that the lot represented by `lotId_` is settled
     /// @dev        Should revert if the lot is not settled
     ///             Inheriting contracts must override this to implement custom logic
     ///
     /// @param      lotId_  The lot ID
-    function _revertIfLotNotSettled(uint96 lotId_) internal view virtual;
+    function _revertIfLotNotSettled(
+        uint96 lotId_
+    ) internal view virtual;
 
     /// @notice     Checks that the lot and bid combination is valid
     /// @dev        Should revert if the bid is invalid
@@ -317,7 +327,9 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     /// @param      bidId_      The bid ID
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual;
 
-    function _revertIfDedicatedSettlePeriod(uint96 lotId_) internal view {
+    function _revertIfDedicatedSettlePeriod(
+        uint96 lotId_
+    ) internal view {
         // Auction must not be in the dedicated settle period
         uint48 conclusion = lotData[lotId_].conclusion;
         if (

@@ -13,11 +13,15 @@ type Veecode is bytes7;
 
 error InvalidVeecode(Veecode veecode_);
 
-function toKeycode(bytes5 keycode_) pure returns (Keycode) {
+function toKeycode(
+    bytes5 keycode_
+) pure returns (Keycode) {
     return Keycode.wrap(keycode_);
 }
 
-function fromKeycode(Keycode keycode_) pure returns (bytes5) {
+function fromKeycode(
+    Keycode keycode_
+) pure returns (bytes5) {
     return Keycode.unwrap(keycode_);
 }
 
@@ -32,16 +36,22 @@ function wrapVeecode(Keycode keycode_, uint8 version_) pure returns (Veecode) {
 }
 
 // solhint-disable-next-line func-visibility
-function toVeecode(bytes7 veecode_) pure returns (Veecode) {
+function toVeecode(
+    bytes7 veecode_
+) pure returns (Veecode) {
     return Veecode.wrap(veecode_);
 }
 
 // solhint-disable-next-line func-visibility
-function fromVeecode(Veecode veecode_) pure returns (bytes7) {
+function fromVeecode(
+    Veecode veecode_
+) pure returns (bytes7) {
     return Veecode.unwrap(veecode_);
 }
 
-function unwrapVeecode(Veecode veecode_) pure returns (Keycode, uint8) {
+function unwrapVeecode(
+    Veecode veecode_
+) pure returns (Keycode, uint8) {
     bytes7 unwrapped = Veecode.unwrap(veecode_);
 
     // Get the version from the first 2 bytes
@@ -57,13 +67,17 @@ function unwrapVeecode(Veecode veecode_) pure returns (Keycode, uint8) {
     return (keycode, version);
 }
 
-function keycodeFromVeecode(Veecode veecode_) pure returns (Keycode) {
+function keycodeFromVeecode(
+    Veecode veecode_
+) pure returns (Keycode) {
     (Keycode keycode,) = unwrapVeecode(veecode_);
     return keycode;
 }
 
 // solhint-disable-next-line func-visibility
-function ensureValidVeecode(Veecode veecode_) pure {
+function ensureValidVeecode(
+    Veecode veecode_
+) pure {
     bytes7 unwrapped = Veecode.unwrap(veecode_);
     for (uint256 i; i < 7;) {
         bytes1 char = unwrapped[i];

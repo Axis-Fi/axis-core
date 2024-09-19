@@ -6,14 +6,7 @@ import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
 import {IGradualDutchAuction} from
     "../../../../src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 
-import {
-    UD60x18,
-    ud,
-    convert,
-    UNIT,
-    uUNIT,
-    EXP_MAX_INPUT
-} from "prb-math-4.0-axis/UD60x18.sol";
+import {UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT} from "prb-math-4.0-axis/UD60x18.sol";
 import "prb-math-4.0-axis/Common.sol" as PRBMath;
 
 import {GdaTest} from "./GDATest.sol";
@@ -43,7 +36,9 @@ contract GdaPriceForTest is GdaTest {
     // TODO can we fuzz this better? maybe use some external calculations to compare the values?
     // Otherwise, we're just recreating the same calculations here and not really validating anything
 
-    function testFuzz_lotIdInvalid_reverts(uint96 lotId_) public {
+    function testFuzz_lotIdInvalid_reverts(
+        uint96 lotId_
+    ) public {
         // No lots have been created so all lots are invalid
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, lotId_);
         vm.expectRevert(err);

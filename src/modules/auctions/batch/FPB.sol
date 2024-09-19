@@ -34,7 +34,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
 
     // ========== SETUP ========== //
 
-    constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
+    constructor(
+        address auctionHouse_
+    ) AuctionModule(auctionHouse_) {
         // Set the minimum auction duration to 1 day initially
         minAuctionDuration = 1 days;
 
@@ -92,7 +94,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     ///
     ///             This function reverts if:
     ///             - The auction is active or has not concluded
-    function _cancelAuction(uint96 lotId_) internal override {
+    function _cancelAuction(
+        uint96 lotId_
+    ) internal override {
         // Validation
         // Batch auctions cannot be cancelled once started, otherwise the seller could cancel the auction after bids have been submitted
         _revertIfLotActive(lotId_);
@@ -339,7 +343,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     ///
     ///             This function reverts if:
     ///             - None
-    function _abort(uint96 lotId_) internal override {
+    function _abort(
+        uint96 lotId_
+    ) internal override {
         // Set the auction status to settled
         _auctionData[lotId_].status = LotStatus.Settled;
 
@@ -391,7 +397,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     /// @inheritdoc IBatchAuction
     /// @dev        This function is not implemented in fixed price batch since bid IDs are not stored in an array
     ///             A proxy is using the nextBidId to determine how many bids have been submitted, but this doesn't consider refunds
-    function getNumBids(uint96) external view override returns (uint256) {}
+    function getNumBids(
+        uint96
+    ) external view override returns (uint256) {}
 
     /// @inheritdoc IBatchAuction
     /// @dev        This function is not implemented in fixed price batch since bid IDs are not stored in an array
@@ -467,7 +475,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     // ========== VALIDATION ========== //
 
     /// @inheritdoc AuctionModule
-    function _revertIfLotActive(uint96 lotId_) internal view override {
+    function _revertIfLotActive(
+        uint96 lotId_
+    ) internal view override {
         if (
             _auctionData[lotId_].status == LotStatus.Created
                 && lotData[lotId_].start <= block.timestamp
@@ -476,7 +486,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     }
 
     /// @inheritdoc BatchAuctionModule
-    function _revertIfLotSettled(uint96 lotId_) internal view override {
+    function _revertIfLotSettled(
+        uint96 lotId_
+    ) internal view override {
         // Auction must not be settled
         if (_auctionData[lotId_].status == LotStatus.Settled) {
             revert Auction_WrongState(lotId_);
@@ -484,7 +496,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     }
 
     /// @inheritdoc BatchAuctionModule
-    function _revertIfLotNotSettled(uint96 lotId_) internal view override {
+    function _revertIfLotNotSettled(
+        uint96 lotId_
+    ) internal view override {
         // Auction must be settled
         if (_auctionData[lotId_].status != LotStatus.Settled) {
             revert Auction_WrongState(lotId_);

@@ -113,7 +113,9 @@ contract CancelTest is Test, Permit2User {
         _mockAuctionModule.cancelAuction(_lotId);
     }
 
-    function testReverts_conclusion(uint48 conclusionElapsed_) external whenLotIsCreated {
+    function testReverts_conclusion(
+        uint48 conclusionElapsed_
+    ) external whenLotIsCreated {
         uint48 conclusionElapsed = uint48(bound(conclusionElapsed_, 0, 1 days));
 
         // Warp to the conclusion

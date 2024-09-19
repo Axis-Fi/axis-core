@@ -59,22 +59,30 @@ contract ECIESisValidTest is Test {
         _;
     }
 
-    modifier whenXLessThanFieldModulus(uint256 x) {
+    modifier whenXLessThanFieldModulus(
+        uint256 x
+    ) {
         if (x >= FIELD_MODULUS) return;
         _;
     }
 
-    modifier whenYLessThanFieldModulus(uint256 y) {
+    modifier whenYLessThanFieldModulus(
+        uint256 y
+    ) {
         if (y >= FIELD_MODULUS) return;
         _;
     }
 
-    modifier whenXGreaterThanOrEqualToFieldModulus(uint256 x) {
+    modifier whenXGreaterThanOrEqualToFieldModulus(
+        uint256 x
+    ) {
         if (x < FIELD_MODULUS) return;
         _;
     }
 
-    modifier whenYGreaterThanOrEqualToFieldModulus(uint256 y) {
+    modifier whenYGreaterThanOrEqualToFieldModulus(
+        uint256 y
+    ) {
         if (y < FIELD_MODULUS) return;
         _;
     }

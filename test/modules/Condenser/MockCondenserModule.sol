@@ -11,7 +11,9 @@ import {MockDerivativeModule} from "../derivatives/mocks/MockDerivativeModule.so
 import {CondenserModule} from "../../../src/modules/Condenser.sol";
 
 contract MockCondenserModule is CondenserModule {
-    constructor(address _owner) Module(_owner) {}
+    constructor(
+        address _owner
+    ) Module(_owner) {}
 
     function VEECODE() public pure virtual override returns (Veecode) {
         return wrapVeecode(toKeycode("COND"), 1);

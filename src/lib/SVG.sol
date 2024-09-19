@@ -17,22 +17,30 @@ library utils {
     }
 
     // formats getting a css variable
-    function getCssVar(string memory _key) internal pure returns (string memory) {
+    function getCssVar(
+        string memory _key
+    ) internal pure returns (string memory) {
         return string.concat("var(--", _key, ")");
     }
 
     // formats getting a def URL
-    function getDefURL(string memory _id) internal pure returns (string memory) {
+    function getDefURL(
+        string memory _id
+    ) internal pure returns (string memory) {
         return string.concat("url(#", _id, ")");
     }
 
     // formats rgba white with a specified opacity / alpha
-    function white_a(uint256 _a) internal pure returns (string memory) {
+    function white_a(
+        uint256 _a
+    ) internal pure returns (string memory) {
         return rgba(255, 255, 255, _a);
     }
 
     // formats rgba black with a specified opacity / alpha
-    function black_a(uint256 _a) internal pure returns (string memory) {
+    function black_a(
+        uint256 _a
+    ) internal pure returns (string memory) {
         return rgba(0, 0, 0, _a);
     }
 
@@ -63,7 +71,9 @@ library utils {
     }
 
     // returns the length of a string in characters
-    function utfStringLength(string memory _str) internal pure returns (uint256 length) {
+    function utfStringLength(
+        string memory _str
+    ) internal pure returns (uint256 length) {
         uint256 i = 0;
         bytes memory string_rep = bytes(_str);
 
@@ -87,7 +97,9 @@ library utils {
     }
 
     // converts an unsigned integer to a string
-    function uint2str(uint256 _i) internal pure returns (string memory _uintAsString) {
+    function uint2str(
+        uint256 _i
+    ) internal pure returns (string memory _uintAsString) {
         if (_i == 0) {
             return "0";
         }
@@ -149,7 +161,9 @@ library svg {
         return el("circle", _props, _children);
     }
 
-    function circle(string memory _props) internal pure returns (string memory) {
+    function circle(
+        string memory _props
+    ) internal pure returns (string memory) {
         return el("circle", _props);
     }
 
@@ -160,7 +174,9 @@ library svg {
         return el("ellipse", _props, _children);
     }
 
-    function ellipse(string memory _props) internal pure returns (string memory) {
+    function ellipse(
+        string memory _props
+    ) internal pure returns (string memory) {
         return el("ellipse", _props);
     }
 
@@ -171,7 +187,9 @@ library svg {
         return el("rect", _props, _children);
     }
 
-    function rect(string memory _props) internal pure returns (string memory) {
+    function rect(
+        string memory _props
+    ) internal pure returns (string memory) {
         return el("rect", _props);
     }
 
@@ -182,7 +200,9 @@ library svg {
         return el("filter", _props, _children);
     }
 
-    function cdata(string memory _content) internal pure returns (string memory) {
+    function cdata(
+        string memory _content
+    ) internal pure returns (string memory) {
         return string.concat("<![CDATA[", _content, "]]>");
     }
 
@@ -218,7 +238,9 @@ library svg {
         );
     }
 
-    function animateTransform(string memory _props) internal pure returns (string memory) {
+    function animateTransform(
+        string memory _props
+    ) internal pure returns (string memory) {
         return el("animateTransform", _props);
     }
 

@@ -476,7 +476,9 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
     ///             Note that this function will not revert if the `onCancel` callback reverts.
     ///
     /// @param      lotId_   The lot ID to abort
-    function abort(uint96 lotId_) external override nonReentrant {
+    function abort(
+        uint96 lotId_
+    ) external override nonReentrant {
         // Validation
         _isLotValid(lotId_);
 
@@ -525,7 +527,9 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
 
     // ========== INTERNAL FUNCTIONS ========== //
 
-    function getBatchModuleForId(uint96 lotId_) public view returns (BatchAuctionModule) {
+    function getBatchModuleForId(
+        uint96 lotId_
+    ) public view returns (BatchAuctionModule) {
         return BatchAuctionModule(address(_getAuctionModuleForId(lotId_)));
     }
 }

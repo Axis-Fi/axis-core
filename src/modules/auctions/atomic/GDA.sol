@@ -100,7 +100,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
 
     // ========== SETUP ========== //
 
-    constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
+    constructor(
+        address auctionHouse_
+    ) AuctionModule(auctionHouse_) {
         // Initially setting the minimum GDA duration to 1 hour
         minAuctionDuration = 1 hours;
     }
@@ -270,7 +272,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
     }
 
     // Do not need to do anything extra here
-    function _cancelAuction(uint96 lotId_) internal override {}
+    function _cancelAuction(
+        uint96 lotId_
+    ) internal override {}
 
     // ========== PURCHASE ========== //
 
@@ -563,7 +567,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         return (payout.intoUint256().mulDiv(10 ** lot.baseTokenDecimals, uUNIT), secondsOfEmissions);
     }
 
-    function maxPayout(uint96 lotId_) external view override returns (uint256) {
+    function maxPayout(
+        uint96 lotId_
+    ) external view override returns (uint256) {
         // Lot ID must be valid
         _revertIfLotInvalid(lotId_);
 
@@ -571,7 +577,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         return lotData[lotId_].capacity;
     }
 
-    function maxAmountAccepted(uint96 lotId_) public view override returns (uint256) {
+    function maxAmountAccepted(
+        uint96 lotId_
+    ) public view override returns (uint256) {
         // The max amount accepted is the price to purchase the remaining capacity of the lot
         // This function checks if the lot ID is valid
         return priceFor(lotId_, lotData[lotId_].capacity);

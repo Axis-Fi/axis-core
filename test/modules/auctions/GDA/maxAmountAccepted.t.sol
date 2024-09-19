@@ -14,7 +14,9 @@ contract GdaMaxAmountAcceptedTest is GdaTest {
     //   [X] it reverts
     // [X] it returns the price for the remaining capacity of the lot
 
-    function testFuzz_lotIdInvalid_reverts(uint96 lotId_) public {
+    function testFuzz_lotIdInvalid_reverts(
+        uint96 lotId_
+    ) public {
         // No lots have been created so all lots are invalid
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, lotId_);
         vm.expectRevert(err);

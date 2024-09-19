@@ -7,13 +7,7 @@ import {IGradualDutchAuction} from
     "../../../../src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 
 import {
-    UD60x18,
-    ud,
-    convert,
-    UNIT,
-    uUNIT,
-    ZERO,
-    EXP_MAX_INPUT
+    UD60x18, ud, convert, UNIT, uUNIT, ZERO, EXP_MAX_INPUT
 } from "prb-math-4.0-axis/UD60x18.sol";
 import "prb-math-4.0-axis/Common.sol" as PRBMath;
 
@@ -26,7 +20,9 @@ contract GdaPurchaseTest is GdaTest {
     uint256 internal _purchaseAmount = 5e18;
     uint256 internal _purchaseAmountOut;
 
-    modifier setPurchaseAmount(uint256 amount) {
+    modifier setPurchaseAmount(
+        uint256 amount
+    ) {
         _purchaseAmount = amount;
         _;
     }

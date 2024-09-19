@@ -6,14 +6,7 @@ import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
 import {IGradualDutchAuction} from
     "../../../../src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 
-import {
-    UD60x18,
-    ud,
-    convert,
-    UNIT,
-    uUNIT,
-    EXP_MAX_INPUT
-} from "prb-math-4.0-axis/UD60x18.sol";
+import {UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT} from "prb-math-4.0-axis/UD60x18.sol";
 import "prb-math-4.0-axis/Common.sol" as PRBMath;
 
 import {GdaTest} from "./GDATest.sol";
@@ -102,7 +95,9 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_equilibriumPriceGreaterThanMax_reverts(uint256 price_) public {
+    function test_equilibriumPriceGreaterThanMax_reverts(
+        uint256 price_
+    ) public {
         vm.assume(price_ > type(uint128).max);
         _gdaParams.equilibriumPrice = price_;
         _auctionParams.implParams = abi.encode(_gdaParams);
@@ -138,7 +133,9 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_capacityGreaterThanMax_reverts(uint256 capacity_) public {
+    function test_capacityGreaterThanMax_reverts(
+        uint256 capacity_
+    ) public {
         vm.assume(capacity_ > type(uint128).max);
         _auctionParams.capacity = capacity_;
 

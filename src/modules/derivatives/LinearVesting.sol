@@ -44,7 +44,9 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
 
     // ========== MODULE SETUP ========== //
 
-    constructor(address parent_) Module(parent_) LinearVestingCard() {
+    constructor(
+        address parent_
+    ) Module(parent_) LinearVestingCard() {
         // Deploy the clone implementation
         _IMPLEMENTATION = address(new SoulboundCloneERC20());
     }
@@ -61,12 +63,16 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
 
     // ========== MODIFIERS ========== //
 
-    modifier onlyValidTokenId(uint256 tokenId_) {
+    modifier onlyValidTokenId(
+        uint256 tokenId_
+    ) {
         if (tokenMetadata[tokenId_].exists == false) revert InvalidParams();
         _;
     }
 
-    modifier onlyDeployedWrapped(uint256 tokenId_) {
+    modifier onlyDeployedWrapped(
+        uint256 tokenId_
+    ) {
         if (tokenMetadata[tokenId_].wrapped == address(0)) {
             revert InvalidParams();
         }
@@ -291,7 +297,9 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
     }
 
     /// @inheritdoc IDerivative
-    function redeemMax(uint256 tokenId_) external virtual override onlyValidTokenId(tokenId_) {
+    function redeemMax(
+        uint256 tokenId_
+    ) external virtual override onlyValidTokenId(tokenId_) {
         // Determine the redeemable amount
         uint256 redeemableAmount = redeemable(msg.sender, tokenId_);
 
@@ -386,7 +394,9 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
 
     /// @inheritdoc IDerivative
     /// @dev        Not implemented
-    function reclaim(uint256) external virtual override {
+    function reclaim(
+        uint256
+    ) external virtual override {
         revert IDerivative.Derivative_NotImplemented();
     }
 

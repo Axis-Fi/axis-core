@@ -72,7 +72,9 @@ abstract contract GdaTest is Test, Permit2User {
 
     // ========== MODIFIERS ========== //
 
-    function _setQuoteTokenDecimals(uint8 decimals_) internal {
+    function _setQuoteTokenDecimals(
+        uint8 decimals_
+    ) internal {
         _quoteTokenDecimals = decimals_;
 
         _gdaParams.equilibriumPrice = _scaleQuoteTokenAmount(_INITIAL_PRICE);
@@ -81,33 +83,45 @@ abstract contract GdaTest is Test, Permit2User {
         _auctionParams.implParams = abi.encode(_gdaParams);
     }
 
-    modifier givenQuoteTokenDecimals(uint8 decimals_) {
+    modifier givenQuoteTokenDecimals(
+        uint8 decimals_
+    ) {
         _setQuoteTokenDecimals(decimals_);
         _;
     }
 
-    function _setBaseTokenDecimals(uint8 decimals_) internal {
+    function _setBaseTokenDecimals(
+        uint8 decimals_
+    ) internal {
         _baseTokenDecimals = decimals_;
 
         _auctionParams.capacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
     }
 
-    modifier givenBaseTokenDecimals(uint8 decimals_) {
+    modifier givenBaseTokenDecimals(
+        uint8 decimals_
+    ) {
         _setBaseTokenDecimals(decimals_);
         _;
     }
 
-    modifier givenLotCapacity(uint256 capacity_) {
+    modifier givenLotCapacity(
+        uint256 capacity_
+    ) {
         _auctionParams.capacity = capacity_;
         _;
     }
 
-    modifier givenStartTimestamp(uint48 start_) {
+    modifier givenStartTimestamp(
+        uint48 start_
+    ) {
         _auctionParams.start = start_;
         _;
     }
 
-    modifier givenDuration(uint48 duration_) {
+    modifier givenDuration(
+        uint48 duration_
+    ) {
         _auctionParams.duration = duration_;
         _;
     }
@@ -127,19 +141,25 @@ abstract contract GdaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenEquilibriumPrice(uint128 price_) {
+    modifier givenEquilibriumPrice(
+        uint128 price_
+    ) {
         _gdaParams.equilibriumPrice = uint256(price_);
         _auctionParams.implParams = abi.encode(_gdaParams);
         _;
     }
 
-    modifier givenMinPrice(uint128 minPrice_) {
+    modifier givenMinPrice(
+        uint128 minPrice_
+    ) {
         _gdaParams.minimumPrice = uint256(minPrice_);
         _auctionParams.implParams = abi.encode(_gdaParams);
         _;
     }
 
-    modifier givenMinIsHalfPrice(uint128 price_) {
+    modifier givenMinIsHalfPrice(
+        uint128 price_
+    ) {
         _gdaParams.minimumPrice = (uint256(price_) / 2) + (price_ % 2 == 0 ? 0 : 1);
         _auctionParams.implParams = abi.encode(_gdaParams);
         _;
@@ -187,13 +207,17 @@ abstract contract GdaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenDecayTarget(uint256 decayTarget_) {
+    modifier givenDecayTarget(
+        uint256 decayTarget_
+    ) {
         _gdaParams.decayTarget = decayTarget_;
         _auctionParams.implParams = abi.encode(_gdaParams);
         _;
     }
 
-    modifier givenDecayPeriod(uint256 decayPeriod_) {
+    modifier givenDecayPeriod(
+        uint256 decayPeriod_
+    ) {
         _gdaParams.decayPeriod = decayPeriod_;
         _auctionParams.implParams = abi.encode(_gdaParams);
         _;
@@ -235,15 +259,21 @@ abstract contract GdaTest is Test, Permit2User {
 
     // ======== Internal Functions ======== //
 
-    function _scaleQuoteTokenAmount(uint256 amount_) internal view returns (uint256) {
+    function _scaleQuoteTokenAmount(
+        uint256 amount_
+    ) internal view returns (uint256) {
         return amount_.mulDiv(10 ** _quoteTokenDecimals, _BASE_SCALE);
     }
 
-    function _scaleBaseTokenAmount(uint256 amount_) internal view returns (uint256) {
+    function _scaleBaseTokenAmount(
+        uint256 amount_
+    ) internal view returns (uint256) {
         return amount_.mulDiv(10 ** _baseTokenDecimals, _BASE_SCALE);
     }
 
-    function _getAuctionLot(uint96 lotId_) internal view returns (IAuction.Lot memory) {
+    function _getAuctionLot(
+        uint96 lotId_
+    ) internal view returns (IAuction.Lot memory) {
         return _module.getLot(lotId_);
     }
 
