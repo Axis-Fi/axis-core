@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {Module, Veecode, toVeecode} from "../../Modules.sol";
 import {AuctionModule} from "../../Auction.sol";
 import {AtomicAuctionModule} from "../AtomicAuctionModule.sol";
+import {IAtomicAuction} from "../../../interfaces/modules/IAtomicAuction.sol";
 import {IGradualDutchAuction} from "../../../interfaces/modules/auctions/IGradualDutchAuction.sol";
 
 // External libraries
@@ -114,6 +115,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
 
     // ========== AUCTION ========== //
 
+    /// @inheritdoc AuctionModule
     function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal override {
         // Decode implementation parameters
         GDAParams memory params = abi.decode(params_, (GDAParams));
@@ -271,13 +273,15 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         data.lastAuctionStart = uint256(lot_.start);
     }
 
-    // Do not need to do anything extra here
+    /// @inheritdoc AuctionModule
+    /// @dev        Do not need to do anything extra here
     function _cancelAuction(
         uint96 lotId_
     ) internal override {}
 
     // ========== PURCHASE ========== //
 
+    /// @inheritdoc AtomicAuctionModule
     function _purchase(
         uint96 lotId_,
         uint256 amount_,
@@ -298,24 +302,24 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
 
     // ========== VIEW FUNCTIONS ========== //
 
-    // For Continuous GDAs with exponential decay, the price of a given token t seconds after being emitted is:
-    // q(t) = r * (q0 - qm) * e^(-k*t) + qm
-    // where k is the decay constant, q0 is the initial price, and qm is the minimum price
-    // Integrating this function from the last auction start time for a particular number of tokens,
-    // gives the multiplier for the token price to determine amount of quote tokens required to purchase:
-    // Q(T) = (r * (q0 - qm) * (e^((k*P)/r) - 1)) / ke^(k*T) + (qm * P)
-    // where T is the time since the last auction start, P is the number of payout tokens to purchase,
-    // and r is the emissions rate (number of tokens released per second).
-    //
-    // If qm is 0, then the equation simplifies to:
-    // q(t) = r * q0 * e^(-k*t)
-    // Integrating this function from the last auction start time for a particular number of tokens,
-    // gives the multiplier for the token price to determine amount of quote tokens required to purchase:
-    // Q(T) = (r * q0 * (e^((k*P)/r) - 1)) / ke^(k*T)
-    // where T is the time since the last auction start, P is the number of payout tokens to purchase.
-    //
-    // Note: this function is an estimate. The actual price returned will vary some due to the precision of the calculations.
-    // Numerator mulDiv operations are rounded up and denominator mulDiv operations are rounded down to ensure the total rounding is conservative (up).
+    /// @inheritdoc IAtomicAuction
+    /// @dev        For Continuous GDAs with exponential decay, the price of a given token t seconds after being emitted is:
+    ///             q(t) = r * (q0 - qm) * e^(-k*t) + qm
+    ///             where k is the decay constant, q0 is the initial price, and qm is the minimum price
+    ///             Integrating this function from the last auction start time for a particular number of tokens,
+    ///             gives the multiplier for the token price to determine amount of quote tokens required to purchase:
+    ///             Q(T) = (r * (q0 - qm) * (e^((k*P)/r) - 1)) / ke^(k*T) + (qm * P)
+    ///             where T is the time since the last auction start, P is the number of payout tokens to purchase,
+    ///             and r is the emissions rate (number of tokens released per second).
+    ///             If qm is 0, then the equation simplifies to:
+    ///             q(t) = r * q0 * e^(-k*t)
+    ///             Integrating this function from the last auction start time for a particular number of tokens,
+    ///             gives the multiplier for the token price to determine amount of quote tokens required to purchase:
+    ///             Q(T) = (r * q0 * (e^((k*P)/r) - 1)) / ke^(k*T)
+    ///             where T is the time since the last auction start, P is the number of payout tokens to purchase.
+    ///
+    ///             Note: this function is an estimate. The actual price returned will vary some due to the precision of the calculations.
+    ///             Numerator mulDiv operations are rounded up and denominator mulDiv operations are rounded down to ensure the total rounding is conservative (up).
     function priceFor(uint96 lotId_, uint256 payout_) public view override returns (uint256) {
         // Lot ID must be valid
         _revertIfLotInvalid(lotId_);
@@ -406,6 +410,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         return amount;
     }
 
+    /// @inheritdoc IAtomicAuction
     function payoutFor(uint96 lotId_, uint256 amount_) public view override returns (uint256) {
         // Lot ID must be valid
         _revertIfLotInvalid(lotId_);
@@ -569,6 +574,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         return (payout.intoUint256().mulDiv(10 ** lot.baseTokenDecimals, uUNIT), secondsOfEmissions);
     }
 
+    /// @inheritdoc IAtomicAuction
     function maxPayout(
         uint96 lotId_
     ) external view override returns (uint256) {
@@ -579,6 +585,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         return lotData[lotId_].capacity;
     }
 
+    /// @inheritdoc IAtomicAuction
     function maxAmountAccepted(
         uint96 lotId_
     ) public view override returns (uint256) {
