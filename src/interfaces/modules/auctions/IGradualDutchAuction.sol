@@ -16,11 +16,11 @@ interface IGradualDutchAuction is IAtomicAuction {
     // ========== DATA STRUCTURES ========== //
 
     /// @notice Auction pricing data
-    /// @param equilibriumPrice The initial price of one base token, where capacity and time are balanced
-    /// @param minimumPrice The minimum price for one base token
-    /// @param lastAuctionStart The time that the last un-purchased auction started, may be in the future
-    /// @param decayConstant The speed at which the price decays, as UD60x18
-    /// @param emissionsRate The number of tokens released per day, as UD60x18. Calculated as capacity / duration (in days)
+    /// @param  equilibriumPrice The initial price of one base token, where capacity and time are balanced
+    /// @param  minimumPrice     The minimum price for one base token
+    /// @param  lastAuctionStart The time that the last un-purchased auction started, may be in the future
+    /// @param  decayConstant    The speed at which the price decays, as UD60x18
+    /// @param  emissionsRate    The number of tokens released per day, as UD60x18. Calculated as capacity / duration (in days)
     struct AuctionData {
         uint256 equilibriumPrice;
         uint256 minimumPrice;
@@ -30,15 +30,15 @@ interface IGradualDutchAuction is IAtomicAuction {
     }
 
     /// @notice Parameters to create a GDA
-    /// @param equilibriumPrice The initial price of one base token, where capacity and time are balanced
-    /// @param minimumPrice The minimum price for one base token
-    /// @param decayTarget The target decay percent over the first decay period of an auction (steepest part of the curve)
-    /// @param decayPeriod The period over which the target decay percent is reached, in seconds
+    /// @param  equilibriumPrice The initial price of one base token, where capacity and time are balanced
+    /// @param  minimumPrice     The minimum price for one base token
+    /// @param  decayTarget      The target decay percent over the first decay period of an auction (steepest part of the curve)
+    /// @param  decayPeriod      The period over which the target decay percent is reached, in seconds
     struct GDAParams {
-        uint256 equilibriumPrice; // initial price of one base token, where capacity and time are balanced
-        uint256 minimumPrice; // minimum price for one base token
-        uint256 decayTarget; // target decay percent over the first decay period of an auction (steepest part of the curve)
-        uint256 decayPeriod; // period over which the target decay percent is reached, in seconds
+        uint256 equilibriumPrice;
+        uint256 minimumPrice;
+        uint256 decayTarget;
+        uint256 decayPeriod;
     }
 
     // ========== STATE VARIABLES ========== //
