@@ -8,7 +8,10 @@ import {IAtomicAuction} from "src/interfaces/modules/IAtomicAuction.sol";
 interface IGradualDutchAuction is IAtomicAuction {
     // ========== ERRORS ========== //
 
-    error GDA_InvalidParams(uint256 step); // the step tells you where the error occurred
+    /// @notice Thrown when the auction parameters are invalid
+    ///
+    /// @param  step    Indicates where the error occurred
+    error GDA_InvalidParams(uint256 step);
 
     // ========== DATA STRUCTURES ========== //
 
