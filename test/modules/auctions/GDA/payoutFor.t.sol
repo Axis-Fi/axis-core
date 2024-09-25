@@ -37,7 +37,6 @@ contract GdaPayoutForTest is GdaTest {
     //   [X] it returns zero
     // [X] when large, reasonable values are used
     //   [X] it does not overflow
-    // TODO can we fuzz this better?
 
     function testFuzz_lotIdInvalid_reverts(
         uint96 lotId_

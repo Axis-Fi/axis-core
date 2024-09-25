@@ -148,6 +148,8 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
+    // TODO: capacity within bounds
+
     function test_minPriceGreaterThanDecayTargetPrice_reverts()
         public
         givenMinPrice(4e18)
@@ -176,7 +178,9 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_minPriceGreaterThanMin_reverts()
+    // TODO: min price within bounds of decay target
+
+    function test_minPriceGreaterThanMax_reverts()
         public
         givenDecayTarget(20e16) // 20% decay from 5e18 is 4e18
         givenMinPrice(35e17 + 1) // 30% decrease (10% more than decay) from 5e18 is 3.5e18, we go slightly higher
@@ -189,6 +193,8 @@ contract GdaCreateAuctionTest is GdaTest {
         // Call the function
         _createAuctionLot();
     }
+
+    // TODO: min price within bounds of equilibrium price
 
     function test_decayTargetLessThanMinimum_reverts()
         public
@@ -216,6 +222,8 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
+    // TODO: decay target within bounds
+
     function test_decayPeriodLessThanMinimum_reverts()
         public
         givenDecayPeriod(uint48(6 hours) - 1)
@@ -241,6 +249,8 @@ contract GdaCreateAuctionTest is GdaTest {
         // Call the function
         _createAuctionLot();
     }
+
+    // TODO: decay period within bounds
 
     function testFuzz_minPriceNonZero_durationGreaterThanLimit_reverts(
         uint8 decayTarget_,
@@ -286,6 +296,8 @@ contract GdaCreateAuctionTest is GdaTest {
         // Call the function
         _createAuctionLot();
     }
+
+    // TODO: min price zero, duration greater than log
 
     function testFuzz_minPriceNonZero_durationEqualToLimit_succeeds(
         uint8 decayTarget_,
@@ -372,6 +384,8 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
+    // TODO: min price not zero, duration greater than exponent
+
     function testFuzz_minPriceZero_durationEqualToLimit_succeeds(
         uint8 decayTarget_,
         uint8 decayHours_
@@ -431,6 +445,8 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
+    // TODO: min price not zero, eq price times emissions zero
+
     function test_minPriceNonZero_MinPriceTimesEmissionsZero_reverts()
         public
         givenMinPrice(1e9) // Smallest value for min price is 10^(quoteDecimals / 2)
@@ -450,6 +466,8 @@ contract GdaCreateAuctionTest is GdaTest {
         // Call the function
         _createAuctionLot();
     }
+
+    // TODO: min price zero, min price times emissions zero
 
     function _assertAuctionData() internal {
         // Calculate the decay constant from the input parameters

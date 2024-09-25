@@ -36,6 +36,9 @@ contract GdaPriceForTest is GdaTest {
     // TODO can we fuzz this better? maybe use some external calculations to compare the values?
     // Otherwise, we're just recreating the same calculations here and not really validating anything
 
+    // TODO: handles quote token decimals greater than base token decimals
+    // TODO: handles quote token decimals less than base token decimals
+
     function testFuzz_lotIdInvalid_reverts(
         uint96 lotId_
     ) public {

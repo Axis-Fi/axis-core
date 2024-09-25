@@ -16,7 +16,7 @@ contract GdaCancelAuctionTest is GdaTest {
     // [X] when the auction has been cancelled
     //  [X] it reverts
     // [X] when the auction has started
-    //  [X] it reverts
+    //  [X] it updates the conclusion, capacity and status
     // [X] it updates the conclusion, capacity and status
 
     function test_notParent_reverts() public {

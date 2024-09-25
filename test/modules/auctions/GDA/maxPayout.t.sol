@@ -11,7 +11,10 @@ contract GdaMaxPayoutTest is GdaTest {
     using {PRBMath.mulDiv} for uint256;
     // [X] when the lot ID is invalid
     //   [X] it reverts
-    // [X] it returns the remaining capacity of the lot
+    // [X] given the minimum price is zero
+    //   [X] it returns the remaining capacity of the lot
+    // [X] given the minimum price is not zero
+    //  [X] it returns the remaining capacity of the lot
 
     function testFuzz_lotIdInvalid_reverts(
         uint96 lotId_
@@ -22,7 +25,7 @@ contract GdaMaxPayoutTest is GdaTest {
         _module.maxPayout(lotId_);
     }
 
-    function testFuzz_maxPayout_success(
+    function testFuzz_minPriceNotZero_success(
         uint128 capacity_
     ) public givenLotCapacity(capacity_) validateCapacity givenLotIsCreated {
         uint256 maxPayout = _module.maxPayout(_lotId);
@@ -30,7 +33,7 @@ contract GdaMaxPayoutTest is GdaTest {
         assertEq(expectedMaxPayout, maxPayout);
     }
 
-    function testFuzz_maxPayout_minPriceZero_success(
+    function testFuzz_minPriceZero_success(
         uint128 capacity_
     ) public givenLotCapacity(capacity_) validateCapacity givenMinPrice(0) givenLotIsCreated {
         uint256 maxPayout = _module.maxPayout(_lotId);
