@@ -346,7 +346,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         ).mul(auction.emissionsRate);
 
         // Calculate the second numerator factor: e^((k*P)/r) - 1
-        // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
+        // This cannot exceed the max exponential input due to the bounds imposed on auction creation
         // emissions rate = initial capacity / duration
         // payout must be less then or equal to initial capacity
         // therefore, the resulting exponent is at most decay constant * duration
@@ -362,7 +362,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         if (block.timestamp >= auction.lastAuctionStart) {
             // T is positive
             // Calculate the denominator: ke^(k*T)
-            // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
+            // This cannot exceed the max exponential input due to the bounds imposed on auction creation
             // Current time - last auction start is guaranteed to be < duration. If not, the auction is over.
             // We round down here (the default behavior) since it is a component of the denominator.
             UD60x18 kekt = auction.decayConstant.mul(
