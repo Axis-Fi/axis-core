@@ -16,7 +16,7 @@ name = "forge-std"
 version = "1.9.1"
 source = "https://soldeer-revisions.s3.amazonaws.com/forge-std/v1_9_1_03-07-2024_14:44:59_forge-std-v1.9.1.zip"
 checksum = "110b35ad3604d91a919c521c71206c18cd07b29c750bd90b5cbbaf37288c9636"
-integrity = "389f8bfe6b6aad01915b1e38e6d4839f8189e8d4792b42be4e10d0a96a358e3f"
+integrity = "229fada41d3af5734ba5e8b2715734b99c7d70335f3dd5a103d2a2e1cae831ba"
 
 [[dependencies]]
 name = "prb-math"
