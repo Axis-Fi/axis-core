@@ -336,7 +336,7 @@ contract GdaCreateAuctionTest is GdaTest {
         console2.log("Decay constant:", decayConstant.unwrap());
 
         // Calculate the maximum duration in seconds
-        uint256 maxDuration = convert(LN_OF_PRODUCT_LN_MAX.div(decayConstant).mul(_ONE_DAY));
+        uint256 maxDuration = convert(_LN_OF_PRODUCT_LN_MAX.div(decayConstant).mul(_ONE_DAY));
         console2.log("Max duration:", maxDuration);
 
         // Set the bounds
