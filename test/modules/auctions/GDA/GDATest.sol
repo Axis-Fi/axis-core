@@ -119,10 +119,16 @@ abstract contract GdaTest is Test, Permit2User {
         _;
     }
 
+    function _setDuration(
+        uint48 duration_
+    ) internal {
+        _auctionParams.duration = duration_;
+    }
+
     modifier givenDuration(
         uint48 duration_
     ) {
-        _auctionParams.duration = duration_;
+        _setDuration(duration_);
         _;
     }
 

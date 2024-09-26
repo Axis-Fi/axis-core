@@ -316,7 +316,42 @@ contract GdaCreateAuctionTest is GdaTest {
         _assertAuctionData();
     }
 
-    function testFuzz_minPriceNonZero_durationGreaterThanLimit_reverts(
+    function testFuzz_minPriceNonZero_duration(
+        uint48 duration_
+    ) public {
+        // Calculate the decay constant
+        // q1 > qm here because qm = 0.5 * q0, and the max decay target is 0.4
+        uint256 quoteTokenScale = 10 ** _quoteTokenDecimals;
+        UD60x18 q0 = ud(_gdaParams.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale));
+        UD60x18 q1 = q0.mul(UNIT - ud(_DECAY_TARGET)).div(UNIT);
+        UD60x18 qm = ud(_gdaParams.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
+
+        console2.log("q0:", q0.unwrap());
+        console2.log("q1:", q1.unwrap());
+        console2.log("qm:", qm.unwrap());
+
+        // Calculate the decay constant
+        UD60x18 decayConstant =
+            (q0 - qm).div(q1 - qm).ln().div(convert(_DECAY_PERIOD).div(_ONE_DAY));
+        console2.log("Decay constant:", decayConstant.unwrap());
+
+        // Calculate the maximum duration in seconds
+        uint256 maxDuration = convert(LN_OF_PRODUCT_LN_MAX.div(decayConstant).mul(_ONE_DAY));
+        console2.log("Max duration:", maxDuration);
+
+        // Set the bounds
+        uint48 duration = uint48(bound(duration_, 1 days, maxDuration));
+        console2.log("Duration:", duration);
+        _setDuration(duration);
+
+        // Call the function
+        _createAuctionLot();
+
+        // Check the auction data
+        _assertAuctionData();
+    }
+
+    function testFuzz_minPriceNonZero_duration_aboveMaximum_reverts(
         uint8 decayTarget_,
         uint8 decayHours_
     ) public {
@@ -361,23 +396,14 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    // TODO: min price zero, duration greater than log
-
-    function testFuzz_minPriceNonZero_durationEqualToLimit_succeeds(
-        uint8 decayTarget_,
-        uint8 decayHours_
-    ) public {
-        // Normalize the inputs
-        uint256 decayTarget = uint256(decayTarget_ % 40 == 0 ? 40 : decayTarget_ % 40) * 1e16;
-        uint256 decayPeriod = uint256(decayHours_ % 163) * 1 hours + 6 hours;
-        console2.log("Decay target:", decayTarget);
-        console2.log("Decay period:", decayPeriod);
-
+    function testFuzz_minPriceZero_duration(
+        uint48 duration_
+    ) public givenMinPrice(0) {
         // Calculate the decay constant
         // q1 > qm here because qm = 0.5 * q0, and the max decay target is 0.4
         uint256 quoteTokenScale = 10 ** _quoteTokenDecimals;
         UD60x18 q0 = ud(_gdaParams.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale));
-        UD60x18 q1 = q0.mul(UNIT - ud(decayTarget)).div(UNIT);
+        UD60x18 q1 = q0.mul(UNIT - ud(_DECAY_TARGET)).div(UNIT);
         UD60x18 qm = ud(_gdaParams.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
 
         console2.log("q0:", q0.unwrap());
@@ -385,25 +411,27 @@ contract GdaCreateAuctionTest is GdaTest {
         console2.log("qm:", qm.unwrap());
 
         // Calculate the decay constant
-        UD60x18 decayConstant = (q0 - qm).div(q1 - qm).ln().div(convert(decayPeriod).div(_ONE_DAY));
+        UD60x18 decayConstant =
+            (q0 - qm).div(q1 - qm).ln().div(convert(_DECAY_PERIOD).div(_ONE_DAY));
         console2.log("Decay constant:", decayConstant.unwrap());
 
         // Calculate the maximum duration in seconds
-        uint256 maxDuration = convert(LN_OF_PRODUCT_LN_MAX.div(decayConstant).mul(_ONE_DAY));
+        uint256 maxDuration = convert(EXP_MAX_INPUT.div(decayConstant).mul(_ONE_DAY));
         console2.log("Max duration:", maxDuration);
 
-        // Set the decay target and decay period to the fuzzed values
-        // Set duration to the max duration
-        _gdaParams.decayTarget = decayTarget;
-        _gdaParams.decayPeriod = decayPeriod;
-        _auctionParams.implParams = abi.encode(_gdaParams);
-        _auctionParams.duration = uint48(maxDuration);
+        // Set the bounds
+        uint48 duration = uint48(bound(duration_, 1 days, maxDuration));
+        console2.log("Duration:", duration);
+        _setDuration(duration);
 
         // Call the function
         _createAuctionLot();
+
+        // Check the auction data
+        _assertAuctionData();
     }
 
-    function testFuzz_minPriceZero_durationGreaterThanLimit_reverts(
+    function testFuzz_minPriceZero_duration_aboveMaximum_reverts(
         uint8 decayTarget_,
         uint8 decayHours_
     ) public givenMinPrice(0) {
@@ -448,47 +476,6 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    // TODO: min price not zero, duration greater than exponent
-
-    function testFuzz_minPriceZero_durationEqualToLimit_succeeds(
-        uint8 decayTarget_,
-        uint8 decayHours_
-    ) public givenMinPrice(0) {
-        // Normalize the inputs
-        uint256 decayTarget = uint256(decayTarget_ % 40 == 0 ? 40 : decayTarget_ % 40) * 1e16;
-        uint256 decayPeriod = uint256(decayHours_ % 163) * 1 hours + 6 hours;
-        console2.log("Decay target:", decayTarget);
-        console2.log("Decay period:", decayPeriod);
-
-        // Calculate the decay constant
-        uint256 quoteTokenScale = 10 ** _quoteTokenDecimals;
-        UD60x18 q0 = ud(_gdaParams.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale));
-        UD60x18 q1 = q0.mul(UNIT - ud(decayTarget)).div(UNIT);
-        UD60x18 qm = ud(_gdaParams.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
-
-        console2.log("q0:", q0.unwrap());
-        console2.log("q1:", q1.unwrap());
-        console2.log("qm:", qm.unwrap());
-
-        // Calculate the decay constant
-        UD60x18 decayConstant = (q0 - qm).div(q1 - qm).ln().div(convert(decayPeriod).div(_ONE_DAY));
-        console2.log("Decay constant:", decayConstant.unwrap());
-
-        // Calculate the maximum duration in seconds
-        uint256 maxDuration = convert(EXP_MAX_INPUT.div(decayConstant).mul(_ONE_DAY));
-        console2.log("Max duration:", maxDuration);
-
-        // Set the decay target and decay period to the fuzzed values
-        // Set duration to the max duration
-        _gdaParams.decayTarget = decayTarget;
-        _gdaParams.decayPeriod = decayPeriod;
-        _auctionParams.implParams = abi.encode(_gdaParams);
-        _auctionParams.duration = uint48(maxDuration);
-
-        // Call the function
-        _createAuctionLot();
-    }
-
     function test_minPriceZero_EqPriceTimesEmissionsZero_reverts()
         public
         givenMinPrice(0)
@@ -509,7 +496,23 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    // TODO: min price not zero, eq price times emissions zero
+    function test_minPriceZero_EqPriceTimesEmissionsNotZero()
+        public
+        givenMinPrice(0)
+        givenLotCapacity(1e9) // Smallest value for capacity is 10^(baseDecimals / 2). We divide the by the duration to get the emissions rate during creation.
+        givenEquilibriumPrice(2e9) // Smallest value for equilibrium price is 10^(quoteDecimals / 2)
+    {
+        // Should revert with the standard duration of 2 days, since:
+        // 2e9 * (1e9 * 1e18 / 2e18) / 1e18
+        // = 2e9 * 5e8 / 1e18
+        // = 1e18 / 1e18 = 1
+
+        // Call the function
+        _createAuctionLot();
+
+        // Check the auction data
+        _assertAuctionData();
+    }
 
     function test_minPriceNonZero_MinPriceTimesEmissionsZero_reverts()
         public
@@ -531,9 +534,25 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    // TODO: min price zero, min price times emissions zero
+    function test_minPriceNonZero_MinPriceTimesEmissionsNotZero_reverts()
+        public
+        givenMinPrice(1e9) // Smallest value for min price is 10^(quoteDecimals / 2)
+        givenEquilibriumPrice(2e9) // Must be no more than 2x the min price
+        givenLotCapacity(2e9) // Smallest value for capacity is 10^(baseDecimals / 2). We divide the by the duration to get the emissions rate during creation.
+    {
+        // Should revert with the standard duration of 2 days, since:
+        // 2e9 * (1e9 * 1e18 / 2e18) / 1e18
+        // = 2e9 * 5e8 / 1e18
+        // = 1e18 / 1e18 = 1
 
-    function _assertAuctionData() internal {
+        // Call the function
+        _createAuctionLot();
+
+        // Check the auction data
+        _assertAuctionData();
+    }
+
+    function _assertAuctionData() internal view {
         // Calculate the decay constant from the input parameters
         uint256 quoteTokenScale = 10 ** _quoteTokenDecimals;
         UD60x18 q0 = ud(_gdaParams.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale));
