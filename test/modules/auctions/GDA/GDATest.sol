@@ -149,11 +149,17 @@ abstract contract GdaTest is Test, Permit2User {
         _;
     }
 
+    function _setMinPrice(
+        uint128 minPrice_
+    ) internal {
+        _gdaParams.minimumPrice = uint256(minPrice_);
+        _auctionParams.implParams = abi.encode(_gdaParams);
+    }
+
     modifier givenMinPrice(
         uint128 minPrice_
     ) {
-        _gdaParams.minimumPrice = uint256(minPrice_);
-        _auctionParams.implParams = abi.encode(_gdaParams);
+        _setMinPrice(minPrice_);
         _;
     }
 
@@ -207,19 +213,31 @@ abstract contract GdaTest is Test, Permit2User {
         _;
     }
 
+    function _setDecayTarget(
+        uint256 decayTarget_
+    ) internal {
+        _gdaParams.decayTarget = decayTarget_;
+        _auctionParams.implParams = abi.encode(_gdaParams);
+    }
+
     modifier givenDecayTarget(
         uint256 decayTarget_
     ) {
-        _gdaParams.decayTarget = decayTarget_;
-        _auctionParams.implParams = abi.encode(_gdaParams);
+        _setDecayTarget(decayTarget_);
         _;
+    }
+
+    function _setDecayPeriod(
+        uint256 decayPeriod_
+    ) internal {
+        _gdaParams.decayPeriod = decayPeriod_;
+        _auctionParams.implParams = abi.encode(_gdaParams);
     }
 
     modifier givenDecayPeriod(
         uint256 decayPeriod_
     ) {
-        _gdaParams.decayPeriod = decayPeriod_;
-        _auctionParams.implParams = abi.encode(_gdaParams);
+        _setDecayPeriod(decayPeriod_);
         _;
     }
 

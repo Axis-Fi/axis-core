@@ -121,7 +121,7 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_capacityLessThanMin_reverts(
+    function test_capacity_lessThanMin_reverts(
         uint128 capacity_
     ) public givenLotCapacity(capacity_ % 1e9) {
         // Expect revert
@@ -133,7 +133,7 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_capacityGreaterThanMax_reverts(
+    function test_capacity_greaterThanMax_reverts(
         uint256 capacity_
     ) public {
         vm.assume(capacity_ > type(uint128).max);
@@ -148,23 +148,22 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    // TODO: capacity within bounds
+    function test_capacity_withinBounds(
+        uint128 capacity_
+    ) public {
+        // Set the bounds
+        uint128 capacity = uint128(bound(capacity_, 1e9 + 1, type(uint128).max));
 
-    function test_minPriceGreaterThanDecayTargetPrice_reverts()
-        public
-        givenMinPrice(4e18)
-        givenDecayTarget(25e16) // 25% decay from 5e18 is 3.75e18
-    {
-        // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(IGradualDutchAuction.GDA_InvalidParams.selector, 4);
-        vm.expectRevert(err);
+        _auctionParams.capacity = capacity;
 
         // Call the function
         _createAuctionLot();
+
+        // Check the auction data
+        _assertAuctionData();
     }
 
-    function test_minPriceEqualToDecayTargetPrice_reverts()
+    function test_minPrice_equalToDecayTargetPrice_reverts()
         public
         givenMinPrice(4e18)
         givenDecayTarget(20e16) // 20% decay from 5e18 is 4e18
@@ -178,13 +177,15 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    // TODO: min price within bounds of decay target
+    function test_minPrice_belowHalfEquilibriumPrice_reverts(
+        uint128 minPrice_
+    ) public givenDecayTarget(20e16) {
+        // Set the bounds
+        // Minimum price needs to be above 0.5 * equilibrium price
+        // 0.5 * equilibrium price = 0.5 * 5e18 = 2.5e18
+        uint128 minPrice = uint128(bound(minPrice_, 1, 25e17 - 1));
+        _setMinPrice(minPrice);
 
-    function test_minPriceGreaterThanMax_reverts()
-        public
-        givenDecayTarget(20e16) // 20% decay from 5e18 is 4e18
-        givenMinPrice(35e17 + 1) // 30% decrease (10% more than decay) from 5e18 is 3.5e18, we go slightly higher
-    {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(IGradualDutchAuction.GDA_InvalidParams.selector, 4);
@@ -194,11 +195,46 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    // TODO: min price within bounds of equilibrium price
+    function test_minPrice_aboveHalfEquilibriumPrice_belowDecayTargetPrice(
+        uint128 minPrice_
+    ) public givenDecayTarget(20e16) {
+        // Set the bounds
+        // Minimum price needs to be above 0.5 * equilibrium price and below the decay target price
+        // 0.5 * equilibrium price = 0.5 * 5e18 = 2.5e18
+        // decay target price = equilibrium price * (1 - decay target - 10%) = 5e18 * (1 - 0.2 - 0.1) = 3.5e18
+        uint128 minPrice = uint128(bound(minPrice_, 25e17, 35e17));
+        _setMinPrice(minPrice);
+
+        // Call the function
+        _createAuctionLot();
+
+        // Check the auction data
+        _assertAuctionData();
+    }
+
+    function test_minPrice_greaterThanDecayTargetPrice_reverts(
+        uint128 minPrice_
+    ) public givenDecayTarget(20e16) {
+        // Set the bounds
+        // Minimum price needs to be above 0.5 * equilibrium price and below the decay target price
+        // 0.5 * equilibrium price = 0.5 * 5e18 = 2.5e18
+        // decay target price = equilibrium price * (1 - decay target - 10%) = 5e18 * (1 - 0.2 - 0.1) = 3.5e18
+        uint128 minPrice = uint128(bound(minPrice_, 35e17 + 1, type(uint128).max));
+        _setMinPrice(minPrice);
+
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(IGradualDutchAuction.GDA_InvalidParams.selector, 4);
+        vm.expectRevert(err);
+
+        // Call the function
+        _createAuctionLot();
+    }
 
     function test_decayTargetLessThanMinimum_reverts()
         public
         givenDecayTarget(1e16 - 1) // slightly less than 1%
+        givenDuration(1 days)
     {
         // Expect revert
         bytes memory err =
@@ -212,6 +248,7 @@ contract GdaCreateAuctionTest is GdaTest {
     function test_decayTargetGreaterThanMaximum_reverts()
         public
         givenDecayTarget(40e16 + 1) // slightly more than 40%
+        givenDuration(1 days)
     {
         // Expect revert
         bytes memory err =
@@ -222,9 +259,24 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    // TODO: decay target within bounds
+    function test_decayTarget_withinBounds(
+        uint8 decayTarget_
+    ) public {
+        // Set the bounds
+        uint256 decayTarget = bound(decayTarget_, 1e16, 40e16);
+        _setDecayTarget(decayTarget);
 
-    function test_decayPeriodLessThanMinimum_reverts()
+        // Set the auction duration to avoid breaking invariants
+        _auctionParams.duration = uint48(1 days);
+
+        // Call the function
+        _createAuctionLot();
+
+        // Check the auction data
+        _assertAuctionData();
+    }
+
+    function test_decayPeriod_lessThanMinimum_reverts()
         public
         givenDecayPeriod(uint48(6 hours) - 1)
     {
@@ -237,7 +289,7 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_decayPeriodGreaterThanMaximum_reverts()
+    function test_decayPeriod_greaterThanMaximum_reverts()
         public
         givenDecayPeriod(uint48(1 weeks) + 1)
     {
@@ -250,7 +302,19 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    // TODO: decay period within bounds
+    function test_decayPeriod_withinBounds(
+        uint256 decayPeriod_
+    ) public {
+        // Set the bounds
+        uint48 decayPeriod = uint48(bound(decayPeriod_, 6 hours, 1 weeks));
+        _setDecayPeriod(decayPeriod);
+
+        // Call the function
+        _createAuctionLot();
+
+        // Check the auction data
+        _assertAuctionData();
+    }
 
     function testFuzz_minPriceNonZero_durationGreaterThanLimit_reverts(
         uint8 decayTarget_,
