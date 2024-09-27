@@ -32,11 +32,18 @@ contract GdaPriceForTest is GdaTest {
     //     [X] it calculates the price correctly
     // [X] when large, reasonable values are used
     //   [X] it does not overflow
+    // [X] when the quote token decimals are larger than the base token decimals
+    //   [X] when the minimum price is zero
+    //     [X] it calculates the price correctly
+    //   [X] when the minimum price is non-zero
+    //     [X] it calculates the price correctly
+    // [X] when the quote token decimals are smaller than the base token decimals
+    //   [X] when the minimum price is zero
+    //     [X] it calculates the price correctly
+    //   [X] when the minimum price is non-zero
+    //     [X] it calculates the price correctly
     // TODO can we fuzz this better? maybe use some external calculations to compare the values?
     // Otherwise, we're just recreating the same calculations here and not really validating anything
-
-    // TODO: handles quote token decimals greater than base token decimals
-    // TODO: handles quote token decimals less than base token decimals
 
     function testFuzz_lotIdInvalid_reverts(
         uint96 lotId_
@@ -292,5 +299,151 @@ contract GdaPriceForTest is GdaTest {
         // The price should be conservative (greater than or equal to the expected price)
         assertGe(price, expectedPrice);
         assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
+    }
+
+    function test_givenQuoteTokenDecimalsLarger_minPriceNonZero()
+        public
+        givenBaseTokenDecimals(9)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        uint256 baseTokenScale = 10 ** 9;
+        uint256 quoteTokenScale = 10 ** 18;
+        uint256 initialPrice = _INITIAL_PRICE * quoteTokenScale / 10 ** 18;
+
+        // The timestamp is the start time so current time == last auction start.
+        // The first auction is now starting. 1 seconds worth of tokens should be at the initial price.
+        uint256 payout = (_LOT_CAPACITY * baseTokenScale / 10 ** 18) / _auctionParams.duration; // 1 seconds worth of tokens
+        console2.log("1 second of token emissions:", payout);
+
+        uint256 price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout at beginning:", price);
+
+        uint256 expectedPrice = initialPrice.mulDiv(payout, baseTokenScale);
+        console2.log("Expected price:", expectedPrice);
+
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
+
+        // Warp to the end of the decay period
+        vm.warp(_start + _DECAY_PERIOD + 1);
+        // The first auction has concluded. The price should be the target price for the decay period.
+        price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout end of decay period:", price);
+
+        expectedPrice =
+            initialPrice.mulDiv(1e18 - _DECAY_TARGET, 1e18).mulDiv(payout, baseTokenScale);
+        console2.log("Expected price:", expectedPrice);
+
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%, TODO is this good enough? Seems like it slightly underestimates
+    }
+
+    function test_givenQuoteTokenDecimalsSmaller_minPriceNonZero()
+        public
+        givenQuoteTokenDecimals(9)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        uint256 baseTokenScale = 10 ** 18;
+        uint256 quoteTokenScale = 10 ** 9;
+        uint256 initialPrice = _INITIAL_PRICE * quoteTokenScale / 10 ** 18;
+
+        // The timestamp is the start time so current time == last auction start.
+        // The first auction is now starting. 1 seconds worth of tokens should be at the initial price.
+        uint256 payout = (_LOT_CAPACITY * baseTokenScale / 10 ** 18) / _auctionParams.duration; // 1 seconds worth of tokens
+        console2.log("1 second of token emissions:", payout);
+
+        uint256 price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout at beginning:", price);
+
+        uint256 expectedPrice = initialPrice.mulDiv(payout, baseTokenScale);
+        console2.log("Expected price:", expectedPrice);
+
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
+
+        // Warp to the end of the decay period
+        vm.warp(_start + _DECAY_PERIOD + 1);
+        // The first auction has concluded. The price should be the target price for the decay period.
+        price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout end of decay period:", price);
+
+        expectedPrice =
+            initialPrice.mulDiv(1e18 - _DECAY_TARGET, 1e18).mulDiv(payout, baseTokenScale);
+        console2.log("Expected price:", expectedPrice);
+
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%, TODO is this good enough? Seems like it slightly underestimates
+    }
+
+    function test_givenQuoteTokenDecimalsLarger_minPriceZero()
+        public
+        givenBaseTokenDecimals(9)
+        givenMinPrice(0)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        uint256 baseTokenScale = 10 ** 9;
+        uint256 quoteTokenScale = 10 ** 18;
+        uint256 initialPrice = _INITIAL_PRICE * quoteTokenScale / 10 ** 18;
+
+        // The timestamp is the start time so current time == last auction start.
+        // The first auction is now starting. 1 seconds worth of tokens should be at the initial price.
+        uint256 payout = (_LOT_CAPACITY * baseTokenScale / 10 ** 18) / _auctionParams.duration; // 1 seconds worth of tokens
+        console2.log("1 second of token emissions:", payout);
+
+        uint256 price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout at beginning:", price);
+
+        uint256 expectedPrice = initialPrice.mulDiv(payout, baseTokenScale);
+        console2.log("Expected price:", expectedPrice);
+
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
+
+        // Warp to the end of the decay period
+        vm.warp(_start + _DECAY_PERIOD + 1);
+        // The first auction has concluded. The price should be the target price for the decay period.
+        price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout end of decay period:", price);
+
+        expectedPrice =
+            initialPrice.mulDiv(1e18 - _DECAY_TARGET, 1e18).mulDiv(payout, baseTokenScale);
+        console2.log("Expected price:", expectedPrice);
+
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%, TODO is this good enough? Seems like it slightly underestimates
+    }
+
+    function test_givenQuoteTokenDecimalsSmaller_minPriceZero()
+        public
+        givenQuoteTokenDecimals(9)
+        givenMinPrice(0)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        uint256 baseTokenScale = 10 ** 18;
+        uint256 quoteTokenScale = 10 ** 9;
+        uint256 initialPrice = _INITIAL_PRICE * quoteTokenScale / 10 ** 18;
+
+        // The timestamp is the start time so current time == last auction start.
+        // The first auction is now starting. 1 seconds worth of tokens should be at the initial price.
+        uint256 payout = (_LOT_CAPACITY * baseTokenScale / 10 ** 18) / _auctionParams.duration; // 1 seconds worth of tokens
+        console2.log("1 second of token emissions:", payout);
+
+        uint256 price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout at beginning:", price);
+
+        uint256 expectedPrice = initialPrice.mulDiv(payout, baseTokenScale);
+        console2.log("Expected price:", expectedPrice);
+
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
+
+        // Warp to the end of the decay period
+        vm.warp(_start + _DECAY_PERIOD + 1);
+        // The first auction has concluded. The price should be the target price for the decay period.
+        price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout end of decay period:", price);
+
+        expectedPrice =
+            initialPrice.mulDiv(1e18 - _DECAY_TARGET, 1e18).mulDiv(payout, baseTokenScale);
+        console2.log("Expected price:", expectedPrice);
+
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%, TODO is this good enough? Seems like it slightly underestimates
     }
 }
