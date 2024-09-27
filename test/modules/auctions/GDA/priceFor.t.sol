@@ -446,4 +446,63 @@ contract GdaPriceForTest is GdaTest {
 
         assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%, TODO is this good enough? Seems like it slightly underestimates
     }
+
+    function test_minPriceNonZero_initialTimestep_largeAmount()
+        public
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Set desired payout to be close to the lot capacity
+        uint256 payout = 9e18;
+
+        IGradualDutchAuction.AuctionData memory data = _getAuctionData(_lotId);
+        console2.log("Emissions rate:", data.emissionsRate.unwrap());
+        console2.log("Decay constant:", data.decayConstant.unwrap());
+
+        // Calculate the expected price
+        // Given: Q(T) = (r * (q0 - qm) * (e^((k*P)/r) - 1)) / ke^(k*T) + (qm * P)
+        // We know:
+        // r = 5e18
+        // q0 = 5e18
+        // qm = 2.5e18
+        // k = 446287102628419492
+        // T = 0
+        // P = 9e18
+        // Q(T) = (5e18 * (5e18 - 2.5e18) * (e^((446287102628419492*9e18)/5e18) - 1)) / (446287102628419492e18 * e^(446287102628419492e18*0)) + (2.5e18 * 9e18)
+        // Should fail with division by zero
+        vm.expectRevert("divide by zero");
+
+        // Calculate the price
+        _module.priceFor(_lotId, payout);
+    }
+
+    function test_minPriceZero_initialTimestep_largeAmount()
+        public
+        givenMinPrice(0)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Set desired payout to be close to the lot capacity
+        uint256 payout = 9e18;
+
+        IGradualDutchAuction.AuctionData memory data = _getAuctionData(_lotId);
+        console2.log("Emissions rate:", data.emissionsRate.unwrap());
+        console2.log("Decay constant:", data.decayConstant.unwrap());
+
+        // Calculate the expected price
+        // Given: Q(T) = (r * q0 * (e^((k*P)/r) - 1)) / ke^(k*T)
+        // We know:
+        // r = 5e18
+        // q0 = 5e18
+        // qm = 2.5e18
+        // k = 446287102628419492
+        // T = 0
+        // P = 9e18
+        // Q(T) = (5e18 * 5e18 * (e^((446287102628419492*9e18)/5e18) - 1)) / 446287102628419492e18 * e^(446287102628419492e18*0)
+        // Should fail with division by zero
+        vm.expectRevert("divide by zero");
+
+        // Calculate the price
+        _module.priceFor(_lotId, payout);
+    }
 }
