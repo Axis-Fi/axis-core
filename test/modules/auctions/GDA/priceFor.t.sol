@@ -468,7 +468,7 @@ contract GdaPriceForTest is GdaTest {
         // k = 446287102628419492
         // T = 0
         // P = 9e18
-        // Q(T) = (5e18 * ((5e18 - 2.5e18)/1e18) * (e^((446287102628419492*9e18)/5e18) - 1e18)) / (446287102628419492 * e^(446287102628419492*0)) + (2.5e18 * 9e18 / 1e18)
+        // Q(T) = (5e18 * ((5e18 - 2.5e18)/1e18) * (e^((446287102628419492 * 9e18)/5e18) - 1e18)) / (446287102628419492 * e^(446287102628419492 * 0)) + (2.5e18 * 9e18 / 1e18)
         // Q(T) = 1.6991124264×10^19
         uint256 expectedPrice = 1.6991124264e19;
 
@@ -499,11 +499,11 @@ contract GdaPriceForTest is GdaTest {
         // r = 5e18
         // q0 = 5e18
         // qm = 2.5e18
-        // k = 446287102628419492
+        // k = 210721031315652584
         // T = 0
         // P = 9e18
-        // Q(T) = (5e18 * ((5e18 - 2.5e18)/1e18) * (e^((446287102628419492*9e18)/5e18) - 1e18)) / (446287102628419492 * e^(446287102628419492*0))
-        // Q(T) = -5.5088757358×10^18
+        // Q(T) = (5e18 * ((5e18 - 2.5e18)/1e18) * (e^((210721031315652584 * 9e18)/5e18) - 1e18)) / (210721031315652584 * e^(210721031315652584 * 0))
+        // Q(T) = -3.6820134881×10^19
 
         // Expect underflow
         vm.expectRevert("arithmetic overflow/underflow");
@@ -512,5 +512,155 @@ contract GdaPriceForTest is GdaTest {
         _module.priceFor(_lotId, payout);
 
         // TODO figure out why this is 54723799175963968489
+    }
+
+    function test_minPriceNonZero_dayTwo_largeAmount()
+        public
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Warp to the second day
+        uint48 timestamp = _start + 1 days;
+        vm.warp(timestamp);
+
+        // Set desired payout to be close to the lot capacity
+        uint256 payout = 9e18;
+
+        IGradualDutchAuction.AuctionData memory data = _getAuctionData(_lotId);
+        console2.log("Emissions rate:", data.emissionsRate.unwrap());
+        console2.log("Decay constant:", data.decayConstant.unwrap());
+
+        // Calculate the expected price
+        // Given: Q(T) = (r * (q0 - qm) * (e^((k*P)/r) - 1)) / ke^(k*T) + (qm * P)
+        // We know:
+        // r = 5e18
+        // q0 = 5e18
+        // qm = 2.5e18
+        // k = 446287102628419492
+        // T = 1 (day)
+        // P = 9e18
+        // Q(T) = (5e18 * ((5e18 - 2.5e18)/1e18) * (e^((446287102628419492 * 9e18)/5e18) - 1e18)) / (446287102628419492 * e^(446287102628419492 * 1)) + (2.5e18 * 9e18 / 1e18)
+        // Q(T) = 2.25e19
+        uint256 expectedPrice = 2.25e19;
+
+        // Calculate the price
+        uint256 price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout at beginning:", price);
+
+        // TODO figure out why this is 44601195694027390496
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
+    }
+
+    function test_minPriceZero_dayTwo_largeAmount()
+        public
+        givenMinPrice(0)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Warp to the second day
+        uint48 timestamp = _start + 1 days;
+        vm.warp(timestamp);
+
+        // Set desired payout to be close to the lot capacity
+        uint256 payout = 9e18;
+
+        IGradualDutchAuction.AuctionData memory data = _getAuctionData(_lotId);
+        console2.log("Emissions rate:", data.emissionsRate.unwrap());
+        console2.log("Decay constant:", data.decayConstant.unwrap());
+
+        // Calculate the expected price
+        // Given: Q(T) = (r * q0 * (e^((k*P)/r) - 1)) / ke^(k*T)
+        // We know:
+        // r = 5e18
+        // q0 = 5e18
+        // qm = 2.5e18
+        // k = 210721031315652584
+        // T = 1 (day)
+        // P = 9e18
+        // Q(T) = (5e18 * ((5e18 - 2.5e18)/1e18) * (e^((210721031315652584 * 9e18)/5e18) - 1e18)) / (210721031315652584 * e^(210721031315652584 * 1))
+        // Q(T) = -174.7340294016
+
+        // Expect underflow
+        vm.expectRevert("arithmetic overflow/underflow");
+
+        // Calculate the price
+        _module.priceFor(_lotId, payout);
+
+        // TODO figure out why this is 44326277332530815351
+    }
+
+    function test_minPriceNonZero_lastDay_largeAmount()
+        public
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Warp to the last day
+        uint48 timestamp = _start + 2 days;
+        vm.warp(timestamp);
+
+        // Set desired payout to be close to the lot capacity
+        uint256 payout = 9e18;
+
+        IGradualDutchAuction.AuctionData memory data = _getAuctionData(_lotId);
+        console2.log("Emissions rate:", data.emissionsRate.unwrap());
+        console2.log("Decay constant:", data.decayConstant.unwrap());
+
+        // Calculate the expected price
+        // Given: Q(T) = (r * (q0 - qm) * (e^((k*P)/r) - 1)) / ke^(k*T) + (qm * P)
+        // We know:
+        // r = 5e18
+        // q0 = 5e18
+        // qm = 2.5e18
+        // k = 446287102628419492
+        // T = 2 (day)
+        // P = 9e18
+        // Q(T) = (5e18 * ((5e18 - 2.5e18)/1e18) * (e^((446287102628419492 * 9e18)/5e18) - 1e18)) / (446287102628419492 * e^(446287102628419492 * 2)) + (2.5e18 * 9e18 / 1e18)
+        // Q(T) = 2.25e19
+        uint256 expectedPrice = 2.25e19;
+
+        // Calculate the price
+        uint256 price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout at beginning:", price);
+
+        // TODO figure out why this is 36644765244177530185
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
+    }
+
+    function test_minPriceZero_lastDay_largeAmount()
+        public
+        givenMinPrice(0)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Warp to the last day
+        uint48 timestamp = _start + 2 days;
+        vm.warp(timestamp);
+
+        // Set desired payout to be close to the lot capacity
+        uint256 payout = 9e18;
+
+        IGradualDutchAuction.AuctionData memory data = _getAuctionData(_lotId);
+        console2.log("Emissions rate:", data.emissionsRate.unwrap());
+        console2.log("Decay constant:", data.decayConstant.unwrap());
+
+        // Calculate the expected price
+        // Given: Q(T) = (r * q0 * (e^((k*P)/r) - 1)) / ke^(k*T)
+        // We know:
+        // r = 5e18
+        // q0 = 5e18
+        // qm = 2.5e18
+        // k = 210721031315652584
+        // T = 2 (day)
+        // P = 9e18
+        // Q(T) = (5e18 * ((5e18 - 2.5e18)/1e18) * (e^((210721031315652584 * 9e18)/5e18) - 1e18)) / (210721031315652584 * e^(210721031315652584 * 2))
+        // Q(T) = -87.3670147008
+
+        // Expect underflow
+        vm.expectRevert("arithmetic overflow/underflow");
+
+        // Calculate the price
+        _module.priceFor(_lotId, payout);
+
+        // TODO figure out why this is 35904284639349961078
     }
 }
