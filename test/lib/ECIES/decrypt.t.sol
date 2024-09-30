@@ -33,7 +33,9 @@ contract ECIESDecryptTest is Test {
         ECIES.decrypt(ciphertext, ciphertextPubKey, recipientPrivateKey, salt);
     }
 
-    function testRevert_privateKeyTooLarge(uint256 privateKey_) public {
+    function testRevert_privateKeyTooLarge(
+        uint256 privateKey_
+    ) public {
         vm.assume(privateKey_ >= ECIES.GROUP_ORDER);
 
         // Setup encryption parameters

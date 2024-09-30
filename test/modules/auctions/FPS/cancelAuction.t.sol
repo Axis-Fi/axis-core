@@ -37,7 +37,9 @@ contract FpsCancelAuctionTest is FpsTest {
         _cancelAuctionLot();
     }
 
-    function test_auctionConcluded_reverts(uint48 conclusionElapsed_) public givenLotIsCreated {
+    function test_auctionConcluded_reverts(
+        uint48 conclusionElapsed_
+    ) public givenLotIsCreated {
         uint48 conclusionElapsed = uint48(bound(conclusionElapsed_, 0, 1 days));
 
         // Warp to the conclusion

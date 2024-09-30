@@ -15,11 +15,15 @@ contract MockFeeOnTransferERC20 is MockERC20 {
         uint8 decimals_
     ) MockERC20(name_, symbol_, decimals_) {}
 
-    function setTransferFee(uint256 transferFee_) external {
+    function setTransferFee(
+        uint256 transferFee_
+    ) external {
         transferFee = transferFee_;
     }
 
-    function setRevertOnZero(bool revertOnZero_) external {
+    function setRevertOnZero(
+        bool revertOnZero_
+    ) external {
         revertOnZero = revertOnZero_;
     }
 

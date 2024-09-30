@@ -34,7 +34,9 @@ abstract contract FeeManager is IFeeManager, ReentrancyGuard {
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address protocol_) {
+    constructor(
+        address protocol_
+    ) {
         _protocol = protocol_;
     }
 
@@ -111,7 +113,9 @@ abstract contract FeeManager is IFeeManager, ReentrancyGuard {
     /// @inheritdoc IFeeManager
     /// @dev        This function reverts if:
     ///             - re-entrancy is detected
-    function claimRewards(address token_) external nonReentrant {
+    function claimRewards(
+        address token_
+    ) external nonReentrant {
         ERC20 token = ERC20(token_);
         uint256 amount = rewards[msg.sender][token];
         rewards[msg.sender][token] = 0;

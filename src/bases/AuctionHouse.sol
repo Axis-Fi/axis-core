@@ -288,7 +288,9 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     /// @dev        The function reverts if:
     ///             - The lot ID is invalid
     ///             - The module for the auction type is not installed
-    function getAuctionModuleForId(uint96 lotId_) external view override returns (IAuction) {
+    function getAuctionModuleForId(
+        uint96 lotId_
+    ) external view override returns (IAuction) {
         _isLotValid(lotId_);
 
         return _getAuctionModuleForId(lotId_);
@@ -298,7 +300,9 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     /// @dev        The function reverts if:
     ///             - The lot ID is invalid
     ///             - The module for the derivative type is not installed
-    function getDerivativeModuleForId(uint96 lotId_) external view override returns (IDerivative) {
+    function getDerivativeModuleForId(
+        uint96 lotId_
+    ) external view override returns (IDerivative) {
         _isLotValid(lotId_);
 
         return _getDerivativeModuleForId(lotId_);
@@ -312,7 +316,9 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     ///
     /// @param lotId_   ID of the auction lot
     /// @return         AuctionModule
-    function _getAuctionModuleForId(uint96 lotId_) internal view returns (AuctionModule) {
+    function _getAuctionModuleForId(
+        uint96 lotId_
+    ) internal view returns (AuctionModule) {
         // Load module, will revert if not installed
         return AuctionModule(_getModuleIfInstalled(lotRouting[lotId_].auctionReference));
     }
@@ -323,7 +329,9 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     ///
     /// @param lotId_   ID of the auction lot
     /// @return         DerivativeModule
-    function _getDerivativeModuleForId(uint96 lotId_) internal view returns (DerivativeModule) {
+    function _getDerivativeModuleForId(
+        uint96 lotId_
+    ) internal view returns (DerivativeModule) {
         // Load module, will revert if not installed. Also reverts if no derivative is specified.
         return DerivativeModule(_getModuleIfInstalled(lotRouting[lotId_].derivativeReference));
     }
@@ -361,7 +369,9 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     /// @dev        Reverts if the lot ID is invalid
     ///
     /// @param      lotId_  ID of the auction lot
-    function _isLotValid(uint96 lotId_) internal view {
+    function _isLotValid(
+        uint96 lotId_
+    ) internal view {
         if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
     }
 
@@ -455,7 +465,9 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
 
     /// @inheritdoc IFeeManager
     /// @dev        Implemented in this contract as it required access to the `onlyOwner` modifier
-    function setProtocol(address protocol_) external override onlyOwner {
+    function setProtocol(
+        address protocol_
+    ) external override onlyOwner {
         _protocol = protocol_;
     }
 

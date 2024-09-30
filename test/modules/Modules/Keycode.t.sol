@@ -120,7 +120,9 @@ contract KeycodeTest is Test {
         ensureValidVeecode(t1Veecode);
     }
 
-    function testRevert_ensureValidVeecode_invalidVersion(uint8 version_) external {
+    function testRevert_ensureValidVeecode_invalidVersion(
+        uint8 version_
+    ) external {
         // Restrict the version to outside of 0-99
         vm.assume(!(version_ >= 0 && version_ <= 99));
 

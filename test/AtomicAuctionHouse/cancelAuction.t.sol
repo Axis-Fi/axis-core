@@ -14,7 +14,9 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
 
     bytes internal _purchaseAuctionData = abi.encode("");
 
-    modifier givenPayoutMultiplier(uint256 multiplier_) {
+    modifier givenPayoutMultiplier(
+        uint256 multiplier_
+    ) {
         _atomicAuctionModule.setPayoutMultiplier(_lotId, multiplier_);
         _;
     }

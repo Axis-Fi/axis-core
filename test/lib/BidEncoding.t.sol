@@ -34,7 +34,9 @@ contract BidEncodingTest is Test {
 
     // ========== decode ========== //
 
-    function testFuzz_decode(bytes32 key) public {
+    function testFuzz_decode(
+        bytes32 key
+    ) public {
         (uint64 bidId, uint96 amountIn, uint96 amountOut) = key.decode();
 
         uint64 eId = uint64(uint256(key >> 192));

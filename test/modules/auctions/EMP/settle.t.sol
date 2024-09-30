@@ -1072,7 +1072,9 @@ contract EmpSettleTest is EmpTest {
         _;
     }
 
-    function _setSettlementComplete(bool complete_) internal {
+    function _setSettlementComplete(
+        bool complete_
+    ) internal {
         _expectedSettlementComplete = complete_;
     }
 

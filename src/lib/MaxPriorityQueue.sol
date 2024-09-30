@@ -12,7 +12,9 @@ library BidEncoding {
         return bytes32(abi.encodePacked(bidId, amountIn, minAmountOut));
     }
 
-    function decode(bytes32 data) internal pure returns (uint64, uint96, uint96) {
+    function decode(
+        bytes32 data
+    ) internal pure returns (uint64, uint96, uint96) {
         uint64 bidId = uint64(uint256(data >> 192));
         uint96 amountIn = uint96(uint256(data >> 96));
         uint96 minAmountOut = uint96(uint256(data));
@@ -60,7 +62,9 @@ library MaxPriorityQueue {
 
     // ========== INITIALIZE ========== //
 
-    function initialize(Queue storage self) internal {
+    function initialize(
+        Queue storage self
+    ) internal {
         self.nextBid[QUEUE_START] = QUEUE_END;
     }
 
@@ -117,7 +121,9 @@ library MaxPriorityQueue {
     // ========== REMOVAL ========== //
 
     /// @notice Remove the max bid from the queue and return it.
-    function delMax(Queue storage self) internal returns (uint64, uint96, uint96) {
+    function delMax(
+        Queue storage self
+    ) internal returns (uint64, uint96, uint96) {
         // Get the max bid
         bytes32 maxKey = self.nextBid[QUEUE_START];
         require(maxKey != QUEUE_END, "queue is empty");
@@ -136,7 +142,9 @@ library MaxPriorityQueue {
     // ========== INSPECTION ========== //
 
     /// @notice Return the max bid from the queue without removing it.
-    function getMax(Queue storage self) internal view returns (uint64, uint96, uint96) {
+    function getMax(
+        Queue storage self
+    ) internal view returns (uint64, uint96, uint96) {
         return self.nextBid[QUEUE_START].decode();
     }
 
@@ -146,12 +154,16 @@ library MaxPriorityQueue {
     }
 
     /// @notice Return the number of bids in the queue.
-    function getNumBids(Queue storage self) internal view returns (uint256) {
+    function getNumBids(
+        Queue storage self
+    ) internal view returns (uint256) {
         return self.numBids;
     }
 
     /// @notice Return true if the queue is empty.
-    function isEmpty(Queue storage self) internal view returns (bool) {
+    function isEmpty(
+        Queue storage self
+    ) internal view returns (bool) {
         return self.numBids == 0;
     }
 }

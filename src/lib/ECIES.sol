@@ -131,7 +131,9 @@ library ECIES {
 
     /// @notice Checks whether a point is on the alt_bn128 curve.
     /// @param  p - The point to check (consists of x and y coordinates).
-    function isOnBn128(Point memory p) internal pure returns (bool) {
+    function isOnBn128(
+        Point memory p
+    ) internal pure returns (bool) {
         // check if the provided point is on the bn128 curve y**2 = x**3 + 3, which has generator point (1, 2)
         return _fieldmul(p.y, p.y) == _fieldadd(_fieldmul(p.x, _fieldmul(p.x, p.x)), 3);
     }
@@ -143,7 +145,9 @@ library ECIES {
     /// 3. Not the point at infinity (0, 0)
     /// 4. The x coordinate is less than the field modulus
     /// 5. The y coordinate is less than the field modulus
-    function isValid(Point memory p) internal pure returns (bool) {
+    function isValid(
+        Point memory p
+    ) internal pure returns (bool) {
         return isOnBn128(p) && !(p.x == 1 && p.y == 2) && !(p.x == 0 && p.y == 0)
             && (p.x < FIELD_MODULUS) && (p.y < FIELD_MODULUS);
     }

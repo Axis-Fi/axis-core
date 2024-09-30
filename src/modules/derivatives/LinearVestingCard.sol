@@ -43,7 +43,9 @@ contract LinearVestingCard {
 
     // ========== ATTRIBUTES ========== //
 
-    function _attributes(Info memory tokenInfo) internal pure returns (string memory) {
+    function _attributes(
+        Info memory tokenInfo
+    ) internal pure returns (string memory) {
         return string.concat(
             '[{"trait_type":"Token ID","value":"',
             Strings.toString(tokenInfo.tokenId),
@@ -67,7 +69,9 @@ contract LinearVestingCard {
     }
 
     // ========== RENDERER ========== //
-    function _render(Info memory tokenInfo) internal view returns (string memory) {
+    function _render(
+        Info memory tokenInfo
+    ) internal view returns (string memory) {
         return string.concat(
             '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 290 500">',
             svg.el(
@@ -98,7 +102,9 @@ contract LinearVestingCard {
 
     // ========== COMPONENTS ========== //
 
-    function _title(string memory symbol) internal pure returns (string memory) {
+    function _title(
+        string memory symbol
+    ) internal pure returns (string memory) {
         return string.concat(
             svg.text(string.concat('x="145" y="40" font-size="20" ', _TEXT_STYLE), "Linear Vesting"),
             svg.text(string.concat('x="145" y="100" font-size="56" ', _TEXT_STYLE), symbol)
@@ -121,7 +127,9 @@ contract LinearVestingCard {
         );
     }
 
-    function _identifier(uint256 tokenId) internal view returns (string memory) {
+    function _identifier(
+        uint256 tokenId
+    ) internal view returns (string memory) {
         return string.concat(
             svg.text(string.concat('x="145" y="460" font-size="10" ', _TEXT_STYLE), _addrString),
             svg.text(
@@ -197,7 +205,9 @@ contract LinearVestingCard {
         );
     }
 
-    function _animateLine(uint256 len) internal pure returns (string memory) {
+    function _animateLine(
+        uint256 len
+    ) internal pure returns (string memory) {
         return svg.rect(
             string.concat(
                 'x="62" y="161" width="12" height="8" fill="url(#blueGreenGradient)" rx="4" ry="4"'

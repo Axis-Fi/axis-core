@@ -102,7 +102,9 @@ contract SendPayoutTest is Test, Permit2User {
         _;
     }
 
-    modifier givenAuctionHouseHasBalance(uint256 amount_) {
+    modifier givenAuctionHouseHasBalance(
+        uint256 amount_
+    ) {
         _payoutToken.mint(address(_auctionHouse), amount_);
         _;
     }

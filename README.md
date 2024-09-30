@@ -65,6 +65,14 @@ Then, the test suite can be run with:
 pnpm run test
 ```
 
+Or:
+
+```shell
+forge test
+```
+
+This command usually performs faster than the `pnpm` command.
+
 #### Address Mismatch
 
 Many of the contracts (e.g. callbacks) require a specific address prefix or have a deterministic address. If tests are failing for this reason, the cause is usually one of:

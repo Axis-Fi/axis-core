@@ -42,7 +42,9 @@ abstract contract BaseCallback is ICallback {
         _;
     }
 
-    modifier onlyRegisteredLot(uint96 lotId_) {
+    modifier onlyRegisteredLot(
+        uint96 lotId_
+    ) {
         if (!lotIdRegistered[lotId_]) revert Callback_NotAuthorized();
         _;
     }

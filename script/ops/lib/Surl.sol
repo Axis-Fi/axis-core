@@ -6,7 +6,9 @@ import {Vm} from "@forge-std-1.9.1/Vm.sol";
 library Surl {
     Vm constant vm = Vm(address(bytes20(uint160(uint256(keccak256("hevm cheat code"))))));
 
-    function get(string memory self) internal returns (uint256 status, bytes memory data) {
+    function get(
+        string memory self
+    ) internal returns (uint256 status, bytes memory data) {
         string[] memory empty = new string[](0);
         return get(self, empty);
     }
@@ -18,7 +20,9 @@ library Surl {
         return curl(self, headers, "", "GET");
     }
 
-    function del(string memory self) internal returns (uint256 status, bytes memory data) {
+    function del(
+        string memory self
+    ) internal returns (uint256 status, bytes memory data) {
         string[] memory empty = new string[](0);
         return curl(self, empty, "", "DELETE");
     }
@@ -39,7 +43,9 @@ library Surl {
         return curl(self, headers, body, "DELETE");
     }
 
-    function patch(string memory self) internal returns (uint256 status, bytes memory data) {
+    function patch(
+        string memory self
+    ) internal returns (uint256 status, bytes memory data) {
         string[] memory empty = new string[](0);
         return curl(self, empty, "", "PATCH");
     }
@@ -60,7 +66,9 @@ library Surl {
         return curl(self, headers, body, "PATCH");
     }
 
-    function post(string memory self) internal returns (uint256 status, bytes memory data) {
+    function post(
+        string memory self
+    ) internal returns (uint256 status, bytes memory data) {
         string[] memory empty = new string[](0);
         return curl(self, empty, "", "POST");
     }
@@ -81,7 +89,9 @@ library Surl {
         return curl(self, headers, body, "POST");
     }
 
-    function put(string memory self) internal returns (uint256 status, bytes memory data) {
+    function put(
+        string memory self
+    ) internal returns (uint256 status, bytes memory data) {
         string[] memory empty = new string[](0);
         return curl(self, empty, "", "PUT");
     }

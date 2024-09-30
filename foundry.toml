@@ -5,9 +5,11 @@ fs_permissions = [{access = "read-write", path = "./bytecode/"}, {access = "read
 ffi = true
 solc_version = "0.8.19"
 evm_version = "paris"
+no-match-test = "optimal"
 
 [fuzz]
-runs = 1024
+runs = 4096
+max_test_rejects = 20000000
 
 # Remappings are setup using remappings.txt, since forge seems to ignore remappings here
 
@@ -27,7 +29,8 @@ ignore = [
 
 [dependencies]
 forge-std = { version = "1.9.1" }
-solmate = { version = "6.7.0", url = "git@github.com:transmissions11/solmate.git", commit = "c892309933b25c03d32b1b0d674df7ae292ba925" }
+solmate = { version = "6.7.0", git = "https://github.com/transmissions11/solmate.git", rev = "c892309933b25c03d32b1b0d674df7ae292ba925" }
 solady = { version = "0.0.124" }
 "@openzeppelin-contracts" = { version = "4.9.2" }
-clones-with-immutable-args = { version = "1.1.1", git = "git@github.com:wighawag/clones-with-immutable-args.git", rev = "f5ca191afea933d50a36d101009b5644dc28bc99" }
+clones-with-immutable-args = { version = "1.1.1", git = "https://github.com/wighawag/clones-with-immutable-args.git", rev = "f5ca191afea933d50a36d101009b5644dc28bc99" }
+prb-math = { version = "4.0-axis", git = "https://github.com/Oighty/prb-math" }

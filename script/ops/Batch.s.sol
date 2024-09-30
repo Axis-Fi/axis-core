@@ -11,7 +11,9 @@ abstract contract Batch is BatchScript {
     string internal chain;
     address safe;
 
-    modifier isBatch(bool send_) {
+    modifier isBatch(
+        bool send_
+    ) {
         // Load environment addresses for chain
         chain = vm.envString("CHAIN");
         env = vm.readFile("./script/env.json");
@@ -26,7 +28,9 @@ abstract contract Batch is BatchScript {
         executeBatch(safe, send_);
     }
 
-    function envAddress(string memory key) internal view returns (address) {
+    function envAddress(
+        string memory key
+    ) internal view returns (address) {
         return env.readAddress(string.concat(".", chain, ".", key));
     }
 }

@@ -14,7 +14,9 @@ contract AuctionHouseSalts is Script, WithEnvironment, WithSalts {
     address internal _envPermit2;
     address internal _envProtocol;
 
-    function _setUp(string calldata chain_) internal {
+    function _setUp(
+        string calldata chain_
+    ) internal {
         _loadEnv(chain_);
         _createBytecodeDirectory();
 

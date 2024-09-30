@@ -31,8 +31,9 @@ import {AuctionModule} from "../../src/modules/Auction.sol";
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "../../src/modules/Keycode.sol";
 
 import {WithSalts} from "../lib/WithSalts.sol";
+import {TestSaltConstants} from "../../script/salts/TestSaltConstants.sol";
 
-abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
+abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts, TestSaltConstants {
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
 
@@ -50,7 +51,6 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     uint256 internal constant _BASE_SCALE = 1e18;
 
-    address internal constant _OWNER = address(0x1);
     address internal constant _SELLER = address(0x2);
     address internal constant _PROTOCOL = address(0x3);
     address internal constant _CURATOR = address(0x4);
@@ -106,7 +106,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
         // Create a BatchAuctionHouse at a deterministic address, since it is used as input to callbacks
         BatchAuctionHouse auctionHouse = new BatchAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
-        _auctionHouse = BatchAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        _auctionHouse = BatchAuctionHouse(_AUCTION_HOUSE);
         vm.etch(address(_auctionHouse), address(auctionHouse).code);
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
         vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
@@ -150,11 +150,15 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     // ===== Helper Functions ===== //
 
-    function _scaleQuoteTokenAmount(uint256 amount_) internal view returns (uint256) {
+    function _scaleQuoteTokenAmount(
+        uint256 amount_
+    ) internal view returns (uint256) {
         return FixedPointMathLib.mulDivDown(amount_, 10 ** _quoteToken.decimals(), _BASE_SCALE);
     }
 
-    function _scaleBaseTokenAmount(uint256 amount_) internal view returns (uint256) {
+    function _scaleBaseTokenAmount(
+        uint256 amount_
+    ) internal view returns (uint256) {
         return FixedPointMathLib.mulDivDown(amount_, 10 ** _baseToken.decimals(), _BASE_SCALE);
     }
 
@@ -186,12 +190,16 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     // ===== Modifiers ===== //
 
-    modifier givenLotHasCapacity(uint96 capacity_) {
+    modifier givenLotHasCapacity(
+        uint96 capacity_
+    ) {
         _auctionParams.capacity = capacity_;
         _;
     }
 
-    function _setBaseTokenDecimals(uint8 decimals_) internal {
+    function _setBaseTokenDecimals(
+        uint8 decimals_
+    ) internal {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", decimals_);
 
         uint256 lotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
@@ -203,19 +211,25 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _auctionParams.capacity = lotCapacity;
     }
 
-    modifier givenBaseTokenHasDecimals(uint8 decimals_) {
+    modifier givenBaseTokenHasDecimals(
+        uint8 decimals_
+    ) {
         _setBaseTokenDecimals(decimals_);
         _;
     }
 
-    function _setQuoteTokenDecimals(uint8 decimals_) internal {
+    function _setQuoteTokenDecimals(
+        uint8 decimals_
+    ) internal {
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", decimals_);
 
         // Update routing params
         _routingParams.quoteToken = address(_quoteToken);
     }
 
-    modifier givenQuoteTokenHasDecimals(uint8 decimals_) {
+    modifier givenQuoteTokenHasDecimals(
+        uint8 decimals_
+    ) {
         _setQuoteTokenDecimals(decimals_);
         _;
     }
@@ -346,7 +360,9 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    modifier whenPermit2ApprovalIsProvided(uint256 amount_) {
+    modifier whenPermit2ApprovalIsProvided(
+        uint256 amount_
+    ) {
         // Approve the Permit2 contract to spend the quote token
         vm.prank(_bidder);
         _quoteToken.approve(_permit2Address, type(uint256).max);
@@ -373,22 +389,30 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _quoteToken.approve(address(_auctionHouse), amount_);
     }
 
-    modifier givenUserHasQuoteTokenBalance(uint256 amount_) {
+    modifier givenUserHasQuoteTokenBalance(
+        uint256 amount_
+    ) {
         _sendUserQuoteTokenBalance(_bidder, amount_);
         _;
     }
 
-    modifier givenUserHasQuoteTokenAllowance(uint256 amount_) {
+    modifier givenUserHasQuoteTokenAllowance(
+        uint256 amount_
+    ) {
         _approveUserQuoteTokenAllowance(_bidder, amount_);
         _;
     }
 
-    modifier givenSellerHasBaseTokenBalance(uint256 amount_) {
+    modifier givenSellerHasBaseTokenBalance(
+        uint256 amount_
+    ) {
         _baseToken.mint(_SELLER, amount_);
         _;
     }
 
-    modifier givenSellerHasBaseTokenAllowance(uint256 amount_) {
+    modifier givenSellerHasBaseTokenAllowance(
+        uint256 amount_
+    ) {
         vm.prank(_SELLER);
         _baseToken.approve(address(_auctionHouse), amount_);
         _;
@@ -429,12 +453,16 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    modifier givenCallbackHasBaseTokenBalance(uint256 amount_) {
+    modifier givenCallbackHasBaseTokenBalance(
+        uint256 amount_
+    ) {
         _baseToken.mint(address(_callback), amount_);
         _;
     }
 
-    modifier givenCallbackHasBaseTokenAllowance(uint256 amount_) {
+    modifier givenCallbackHasBaseTokenAllowance(
+        uint256 amount_
+    ) {
         vm.prank(address(_callback));
         _baseToken.approve(address(_auctionHouse), amount_);
         _;
@@ -517,7 +545,9 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    function _setMaxReferrerFee(uint24 fee_) internal {
+    function _setMaxReferrerFee(
+        uint24 fee_
+    ) internal {
         vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionModuleKeycode, IFeeManager.FeeType.MaxReferrer, fee_);
         _maxReferrerFeePercentActual = fee_;
@@ -528,12 +558,16 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    function _setReferrerFee(uint24 fee_) internal {
+    function _setReferrerFee(
+        uint24 fee_
+    ) internal {
         _referrerFeePercentActual = fee_;
         _routingParams.referrerFee = fee_;
     }
 
-    modifier givenReferrerFee(uint24 fee_) {
+    modifier givenReferrerFee(
+        uint24 fee_
+    ) {
         _setReferrerFee(fee_);
         _;
     }
@@ -543,7 +577,9 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    function _setCuratorFee(uint24 fee_) internal {
+    function _setCuratorFee(
+        uint24 fee_
+    ) internal {
         vm.prank(_CURATOR);
         _auctionHouse.setCuratorFee(_auctionModuleKeycode, fee_);
         _curatorFeePercentActual = fee_;
@@ -562,7 +598,9 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    function _setProtocolFee(uint24 fee_) internal {
+    function _setProtocolFee(
+        uint24 fee_
+    ) internal {
         vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionModuleKeycode, IFeeManager.FeeType.Protocol, fee_);
         _protocolFeePercentActual = fee_;
@@ -573,7 +611,9 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    modifier givenBidIsClaimed(uint64 bidId_) {
+    modifier givenBidIsClaimed(
+        uint64 bidId_
+    ) {
         uint64[] memory bids = new uint64[](1);
         bids[0] = bidId_;
 
@@ -587,7 +627,9 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    modifier givenRecipientIsOnBaseTokenBlacklist(address recipient_) {
+    modifier givenRecipientIsOnBaseTokenBlacklist(
+        address recipient_
+    ) {
         _baseToken.setBlacklist(recipient_, true);
         _;
     }
@@ -597,14 +639,18 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    modifier givenRecipientIsOnQuoteTokenBlacklist(address recipient_) {
+    modifier givenRecipientIsOnQuoteTokenBlacklist(
+        address recipient_
+    ) {
         _quoteToken.setBlacklist(recipient_, true);
         _;
     }
 
     // ===== Helpers ===== //
 
-    function _getLotRouting(uint96 lotId_) internal view returns (IAuctionHouse.Routing memory) {
+    function _getLotRouting(
+        uint96 lotId_
+    ) internal view returns (IAuctionHouse.Routing memory) {
         (
             address seller_,
             address baseToken_,
@@ -630,7 +676,9 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         });
     }
 
-    function _getLotFees(uint96 lotId_) internal view returns (IAuctionHouse.FeeData memory) {
+    function _getLotFees(
+        uint96 lotId_
+    ) internal view returns (IAuctionHouse.FeeData memory) {
         (
             address curator_,
             bool curated_,
@@ -648,7 +696,9 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         });
     }
 
-    function _getLotData(uint96 lotId_) internal view returns (IAuction.Lot memory) {
+    function _getLotData(
+        uint96 lotId_
+    ) internal view returns (IAuction.Lot memory) {
         return _auctionModule.getLot(lotId_);
     }
 }
