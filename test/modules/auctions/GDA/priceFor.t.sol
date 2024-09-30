@@ -468,12 +468,16 @@ contract GdaPriceForTest is GdaTest {
         // k = 446287102628419492
         // T = 0
         // P = 9e18
-        // Q(T) = (5e18 * (5e18 - 2.5e18) * (e^((446287102628419492*9e18)/5e18) - 1)) / (446287102628419492e18 * e^(446287102628419492e18*0)) + (2.5e18 * 9e18)
-        // Should fail with division by zero
-        vm.expectRevert("divide by zero");
+        // Q(T) = (5e18 * ((5e18 - 2.5e18)/1e18) * (e^((446287102628419492*9e18)/5e18) - 1e18)) / (446287102628419492 * e^(446287102628419492*0)) + (2.5e18 * 9e18 / 1e18)
+        // Q(T) = 1.6991124264×10^19
+        uint256 expectedPrice = 1.6991124264e19;
 
         // Calculate the price
-        _module.priceFor(_lotId, payout);
+        uint256 price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout at beginning:", price);
+
+        // TODO figure out why this is 57033118271917796895
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
     }
 
     function test_minPriceZero_initialTimestep_largeAmount()
@@ -498,11 +502,15 @@ contract GdaPriceForTest is GdaTest {
         // k = 446287102628419492
         // T = 0
         // P = 9e18
-        // Q(T) = (5e18 * 5e18 * (e^((446287102628419492*9e18)/5e18) - 1)) / 446287102628419492e18 * e^(446287102628419492e18*0)
-        // Should fail with division by zero
-        vm.expectRevert("divide by zero");
+        // Q(T) = (5e18 * ((5e18 - 2.5e18)/1e18) * (e^((446287102628419492*9e18)/5e18) - 1e18)) / (446287102628419492 * e^(446287102628419492*0))
+        // Q(T) = -5.5088757358×10^18
+
+        // Expect underflow
+        vm.expectRevert("arithmetic overflow/underflow");
 
         // Calculate the price
         _module.priceFor(_lotId, payout);
+
+        // TODO figure out why this is 54723799175963968489
     }
 }
