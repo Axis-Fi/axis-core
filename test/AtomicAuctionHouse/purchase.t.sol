@@ -49,7 +49,9 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         _;
     }
 
-    modifier whenPayoutMultiplierIsSet(uint256 multiplier_) {
+    modifier whenPayoutMultiplierIsSet(
+        uint256 multiplier_
+    ) {
         _atomicAuctionModule.setPayoutMultiplier(_lotId, multiplier_);
 
         uint256 amountInLessFees = _scaleQuoteTokenAmount(_AMOUNT_IN)
@@ -79,13 +81,17 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         _;
     }
 
-    modifier givenFeesAreCalculated(uint256 amountIn_) {
+    modifier givenFeesAreCalculated(
+        uint256 amountIn_
+    ) {
         _expectedReferrerFeesAllocated = (amountIn_ * _referrerFeePercentActual) / 100e2;
         _expectedProtocolFeesAllocated = (amountIn_ * _protocolFeePercentActual) / 100e2;
         _;
     }
 
-    modifier givenFeesAreCalculatedNoReferrer(uint256 amountIn_) {
+    modifier givenFeesAreCalculatedNoReferrer(
+        uint256 amountIn_
+    ) {
         _expectedReferrerFeesAllocated = 0;
         _expectedProtocolFeesAllocated =
             (amountIn_ * (_protocolFeePercentActual + _referrerFeePercentActual)) / 100e2;

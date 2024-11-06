@@ -528,7 +528,9 @@ contract FpbBidTest is FpbTest {
         );
     }
 
-    function test_partialFill_auctionPriceFuzz(uint256 price_) public {
+    function test_partialFill_auctionPriceFuzz(
+        uint256 price_
+    ) public {
         // Given that the capacity is set, there is a maximum value to the price before the bidAmount hits uint96
         // 11e18 * price / 1e18 <= type(uint96).max
         // price <= type(uint96).max / 10e18

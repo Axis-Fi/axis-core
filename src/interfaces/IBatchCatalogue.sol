@@ -11,7 +11,9 @@ interface IBatchCatalogue is ICatalogue {
     ///
     /// @param  lotId_  The lot ID
     /// @return numBids The number of bids
-    function getNumBids(uint96 lotId_) external view returns (uint256 numBids);
+    function getNumBids(
+        uint96 lotId_
+    ) external view returns (uint256 numBids);
 
     /// @notice Get the bid IDs from the given index
     ///

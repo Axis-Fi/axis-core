@@ -97,5 +97,7 @@ interface IBatchAuctionHouse is IAuctionHouse {
     ///            3. Refund the seller
     ///
     /// @param     lotId_    The lot id
-    function abort(uint96 lotId_) external;
+    function abort(
+        uint96 lotId_
+    ) external;
 }

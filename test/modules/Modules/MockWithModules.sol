@@ -7,9 +7,13 @@ import {WithModules, Veecode} from "../../../src/modules/Modules.sol";
 import {MockModuleV1} from "./MockModule.sol";
 
 contract MockWithModules is WithModules {
-    constructor(address _owner) WithModules(_owner) {}
+    constructor(
+        address _owner
+    ) WithModules(_owner) {}
 
-    function callProhibited(Veecode veecode_) external view returns (bool) {
+    function callProhibited(
+        Veecode veecode_
+    ) external view returns (bool) {
         MockModuleV1 module = MockModuleV1(_getModuleIfInstalled(veecode_));
 
         return module.prohibited();

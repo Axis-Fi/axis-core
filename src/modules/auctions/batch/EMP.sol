@@ -88,7 +88,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
 
     // ========== SETUP ========== //
 
-    constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
+    constructor(
+        address auctionHouse_
+    ) AuctionModule(auctionHouse_) {
         // Set the minimum auction duration to 1 day initially
         minAuctionDuration = 1 days;
 
@@ -165,7 +167,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     ///
     ///             This function reverts if:
     ///             - The auction is active or has not concluded
-    function _cancelAuction(uint96 lotId_) internal override {
+    function _cancelAuction(
+        uint96 lotId_
+    ) internal override {
         // Validation
         // Batch auctions cannot be cancelled once started, otherwise the seller could cancel the auction after bids have been submitted
         _revertIfLotActive(lotId_);
@@ -579,7 +583,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     }
 
     /// @inheritdoc IEncryptedMarginalPrice
-    function getNumBidsInQueue(uint96 lotId_) external view override returns (uint256) {
+    function getNumBidsInQueue(
+        uint96 lotId_
+    ) external view override returns (uint256) {
         return decryptedBids[lotId_].getNumBids();
     }
 
@@ -865,7 +871,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     ///
     ///             This function reverts if:
     ///             - None
-    function _abort(uint96 lotId_) internal override {
+    function _abort(
+        uint96 lotId_
+    ) internal override {
         // Set the auction status to settled
         auctionData[lotId_].status = LotStatus.Settled;
 
@@ -921,7 +929,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     /// @inheritdoc IBatchAuction
     /// @dev        This function reverts if:
     ///             - The lot ID is invalid
-    function getNumBids(uint96 lotId_) external view override returns (uint256) {
+    function getNumBids(
+        uint96 lotId_
+    ) external view override returns (uint256) {
         _revertIfLotInvalid(lotId_);
 
         return auctionData[lotId_].bidIds.length;
@@ -1040,7 +1050,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     // ========== VALIDATION ========== //
 
     /// @inheritdoc AuctionModule
-    function _revertIfLotActive(uint96 lotId_) internal view override {
+    function _revertIfLotActive(
+        uint96 lotId_
+    ) internal view override {
         if (
             auctionData[lotId_].status == LotStatus.Created
                 && lotData[lotId_].start <= block.timestamp
@@ -1049,7 +1061,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     }
 
     /// @notice Reverts if the private key has been submitted for the lot
-    function _revertIfKeySubmitted(uint96 lotId_) internal view {
+    function _revertIfKeySubmitted(
+        uint96 lotId_
+    ) internal view {
         // Private key must not have been submitted yet
         if (auctionData[lotId_].privateKey != 0) {
             revert Auction_WrongState(lotId_);
@@ -1057,7 +1071,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     }
 
     /// @inheritdoc BatchAuctionModule
-    function _revertIfLotSettled(uint96 lotId_) internal view override {
+    function _revertIfLotSettled(
+        uint96 lotId_
+    ) internal view override {
         // Auction must not be settled
         if (auctionData[lotId_].status == LotStatus.Settled) {
             revert Auction_WrongState(lotId_);
@@ -1065,7 +1081,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     }
 
     /// @inheritdoc BatchAuctionModule
-    function _revertIfLotNotSettled(uint96 lotId_) internal view override {
+    function _revertIfLotNotSettled(
+        uint96 lotId_
+    ) internal view override {
         // Auction must be settled
         if (auctionData[lotId_].status != LotStatus.Settled) {
             revert Auction_WrongState(lotId_);

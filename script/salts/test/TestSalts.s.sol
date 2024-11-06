@@ -15,7 +15,9 @@ import {TestConstants} from "../../../test/Constants.sol";
 contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts, TestConstants {
     string internal constant _MOCK_CALLBACK = "MockCallback";
 
-    function _setUp(string calldata chain_) internal {
+    function _setUp(
+        string calldata chain_
+    ) internal {
         _loadEnv(chain_);
         _createBytecodeDirectory();
     }

@@ -49,7 +49,9 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     mapping(uint96 => bool) public settlementFinished;
 
-    constructor(address _owner) AuctionModule(_owner) {
+    constructor(
+        address _owner
+    ) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
         dedicatedSettlePeriod = 1 days;
     }
@@ -60,7 +62,9 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     function _auction(uint96, Lot memory, bytes memory) internal virtual override {}
 
-    function _cancelAuction(uint96 id_) internal override {}
+    function _cancelAuction(
+        uint96 id_
+    ) internal override {}
 
     function _bid(
         uint96 lotId_,
@@ -175,7 +179,9 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         return (lotData[lotId_].purchased, lotData[lotId_].sold, settlementFinished[lotId_], "");
     }
 
-    function _abort(uint96 lotId_) internal override {
+    function _abort(
+        uint96 lotId_
+    ) internal override {
         // Update status
         lotStatus[lotId_] = LotStatus.Settled;
     }
@@ -209,21 +215,27 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         }
     }
 
-    function _revertIfLotSettled(uint96 lotId_) internal view virtual override {
+    function _revertIfLotSettled(
+        uint96 lotId_
+    ) internal view virtual override {
         // Check that the lot has not been settled
         if (lotStatus[lotId_] == LotStatus.Settled) {
             revert IAuction.Auction_LotNotActive(lotId_);
         }
     }
 
-    function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {
+    function _revertIfLotNotSettled(
+        uint96 lotId_
+    ) internal view virtual override {
         // Check that the lot has been settled
         if (lotStatus[lotId_] != LotStatus.Settled) {
             revert IAuction.Auction_InvalidParams();
         }
     }
 
-    function getNumBids(uint96) external view override returns (uint256) {
+    function getNumBids(
+        uint96
+    ) external view override returns (uint256) {
         return bidIds.length;
     }
 

@@ -13,12 +13,16 @@ import {Catalogue} from "./bases/Catalogue.sol";
 contract BatchCatalogue is IBatchCatalogue, Catalogue {
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address auctionHouse_) Catalogue(auctionHouse_) {}
+    constructor(
+        address auctionHouse_
+    ) Catalogue(auctionHouse_) {}
 
     // ========== RETRIEVING BIDS ========== //
 
     /// @inheritdoc IBatchCatalogue
-    function getNumBids(uint96 lotId_) external view returns (uint256) {
+    function getNumBids(
+        uint96 lotId_
+    ) external view returns (uint256) {
         IBatchAuction module =
             IBatchAuction(address(IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_)));
 

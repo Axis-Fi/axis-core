@@ -14,7 +14,9 @@ import {Catalogue} from "./bases/Catalogue.sol";
 contract AtomicCatalogue is IAtomicCatalogue, Catalogue {
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address auctionHouse_) Catalogue(auctionHouse_) {}
+    constructor(
+        address auctionHouse_
+    ) Catalogue(auctionHouse_) {}
 
     // ========== ATOMIC AUCTION ========== //
 
@@ -49,7 +51,9 @@ contract AtomicCatalogue is IAtomicCatalogue, Catalogue {
     }
 
     /// @inheritdoc IAtomicCatalogue
-    function maxPayout(uint96 lotId_) external view returns (uint256) {
+    function maxPayout(
+        uint96 lotId_
+    ) external view returns (uint256) {
         IAtomicAuction module =
             IAtomicAuction(address(IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_)));
 
@@ -60,7 +64,9 @@ contract AtomicCatalogue is IAtomicCatalogue, Catalogue {
     }
 
     /// @inheritdoc IAtomicCatalogue
-    function maxAmountAccepted(uint96 lotId_) external view returns (uint256) {
+    function maxAmountAccepted(
+        uint96 lotId_
+    ) external view returns (uint256) {
         IAtomicAuction module =
             IAtomicAuction(address(IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_)));
 

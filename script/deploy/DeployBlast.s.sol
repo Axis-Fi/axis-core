@@ -124,7 +124,9 @@ contract DeployBlast is Deploy {
         return (address(amEmp), _PREFIX_AUCTION_MODULES);
     }
 
-    function deployFixedPriceSale(bytes memory) public override returns (address, string memory) {
+    function deployFixedPriceSale(
+        bytes memory
+    ) public override returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying BlastFPS (Fixed Price Sale)");
@@ -152,7 +154,9 @@ contract DeployBlast is Deploy {
         return (address(amFps), _PREFIX_AUCTION_MODULES);
     }
 
-    function deployFixedPriceBatch(bytes memory) public override returns (address, string memory) {
+    function deployFixedPriceBatch(
+        bytes memory
+    ) public override returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying BlastFPB (Fixed Price Batch)");

@@ -30,7 +30,9 @@ contract MockDerivativeModule is DerivativeModule {
         uint256 multiplier;
     }
 
-    constructor(address _owner) Module(_owner) {
+    constructor(
+        address _owner
+    ) Module(_owner) {
         derivativeToken = new MockERC6909();
     }
 
@@ -113,7 +115,9 @@ contract MockDerivativeModule is DerivativeModule {
 
     function exercise(uint256 tokenId_, uint256 amount) external virtual override {}
 
-    function reclaim(uint256 tokenId_) external virtual override {}
+    function reclaim(
+        uint256 tokenId_
+    ) external virtual override {}
 
     function transform(
         uint256 tokenId_,
@@ -141,11 +145,15 @@ contract MockDerivativeModule is DerivativeModule {
         return true;
     }
 
-    function setValidateFails(bool validateFails_) external {
+    function setValidateFails(
+        bool validateFails_
+    ) external {
         _validateFails = validateFails_;
     }
 
-    function setWrappedImplementation(MockWrappedDerivative implementation_) external {
+    function setWrappedImplementation(
+        MockWrappedDerivative implementation_
+    ) external {
         _wrappedImplementation = implementation_;
     }
 
@@ -200,20 +208,32 @@ contract MockDerivativeModule is DerivativeModule {
         return (tokenId, token.wrapped);
     }
 
-    function redeemMax(uint256 tokenId_) external virtual override {}
+    function redeemMax(
+        uint256 tokenId_
+    ) external virtual override {}
 
     function redeemable(
         address owner_,
         uint256 tokenId_
     ) external view virtual override returns (uint256) {}
 
-    function name(uint256 tokenId_) public view virtual override returns (string memory) {}
+    function name(
+        uint256 tokenId_
+    ) public view virtual override returns (string memory) {}
 
-    function symbol(uint256 tokenId_) public view virtual override returns (string memory) {}
+    function symbol(
+        uint256 tokenId_
+    ) public view virtual override returns (string memory) {}
 
-    function decimals(uint256 tokenId_) public view virtual override returns (uint8) {}
+    function decimals(
+        uint256 tokenId_
+    ) public view virtual override returns (uint8) {}
 
-    function tokenURI(uint256 tokenId_) public view virtual override returns (string memory) {}
+    function tokenURI(
+        uint256 tokenId_
+    ) public view virtual override returns (string memory) {}
 
-    function totalSupply(uint256 tokenId_) public view virtual override returns (uint256) {}
+    function totalSupply(
+        uint256 tokenId_
+    ) public view virtual override returns (uint256) {}
 }

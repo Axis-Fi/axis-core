@@ -69,7 +69,9 @@ library Callbacks {
 
     /// @notice Ensures that the callbacks contract includes at least one of the required flags and more if sending/receiving tokens
     /// @param callbacks The callbacks contract to verify
-    function isValidCallbacksAddress(ICallback callbacks) internal pure returns (bool) {
+    function isValidCallbacksAddress(
+        ICallback callbacks
+    ) internal pure returns (bool) {
         // Ensure that if the contract is expected to send base tokens, then it implements atleast onCreate and onCurate OR onPurchase (atomic auctions may not be prefunded).
         if (
             callbacks.hasPermission(SEND_BASE_TOKENS_FLAG)
@@ -227,7 +229,9 @@ library Callbacks {
     }
 
     /// @notice bubble up revert if present. Else throw FailedCallback error
-    function _revert(bytes memory result) private pure {
+    function _revert(
+        bytes memory result
+    ) private pure {
         if (result.length > 0) {
             assembly {
                 revert(add(0x20, result), mload(result))

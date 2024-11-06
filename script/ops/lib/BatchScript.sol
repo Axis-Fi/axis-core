@@ -155,7 +155,9 @@ abstract contract BatchScript is Script, DelegatePrank {
     }
 
     // Encodes the stored encoded transactions into a single Multisend transaction
-    function _createBatch(address safe_) internal returns (Batch memory batch) {
+    function _createBatch(
+        address safe_
+    ) internal returns (Batch memory batch) {
         // Set initial batch fields
         batch.to = SAFE_MULTISEND_ADDRESS;
         batch.value = 0;
@@ -359,7 +361,9 @@ abstract contract BatchScript is Script, DelegatePrank {
         return payload;
     }
 
-    function _stripSlashQuotes(string memory str_) internal returns (string memory) {
+    function _stripSlashQuotes(
+        string memory str_
+    ) internal returns (string memory) {
         // solhint-disable quotes
         // Remove slash quotes from string
         string memory command = string.concat(
@@ -386,7 +390,9 @@ abstract contract BatchScript is Script, DelegatePrank {
         return string(res);
     }
 
-    function _getNonce(address safe_) internal returns (uint256) {
+    function _getNonce(
+        address safe_
+    ) internal returns (uint256) {
         string memory endpoint = string.concat(SAFE_API_BASE_URL, vm.toString(safe_), "/");
         (uint256 status, bytes memory data) = endpoint.get();
         if (status == 200) {
@@ -397,7 +403,9 @@ abstract contract BatchScript is Script, DelegatePrank {
         }
     }
 
-    function _getSafeAPIEndpoint(address safe_) internal view returns (string memory) {
+    function _getSafeAPIEndpoint(
+        address safe_
+    ) internal view returns (string memory) {
         return string.concat(SAFE_API_BASE_URL, vm.toString(safe_), SAFE_API_MULTISIG_SEND);
     }
 
