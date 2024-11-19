@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {Test} from "@forge-std-1.9.1/Test.sol";
 
 // Mocks
-import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
+import {MockERC20} from "@solmate-6.8.0/test/utils/mocks/MockERC20.sol";
 import {MockAtomicAuctionModule} from "./MockAtomicAuctionModule.sol";
 import {Permit2User} from "../../lib/permit2/Permit2User.sol";
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
-import {SafeTransferLib} from "@solmate-6.7.0/utils/SafeTransferLib.sol";
+import {ERC20} from "@solmate-6.8.0/tokens/ERC20.sol";
+import {SafeTransferLib} from "@solmate-6.8.0/utils/SafeTransferLib.sol";
 import {ClonesWithImmutableArgs} from
     "@clones-with-immutable-args-1.1.1/ClonesWithImmutableArgs.sol";
-import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 import {Base64} from "@openzeppelin-contracts-4.9.2/utils/Base64.sol";
 
 import {Timestamp} from "../../lib/Timestamp.sol";

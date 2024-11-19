@@ -14,7 +14,7 @@ import {Transfer} from "../../src/lib/Transfer.sol";
 
 // External libraries
 import {Test} from "@forge-std-1.9.1/Test.sol";
-import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 
 // Mocks
 import {MockAtomicAuctionModule} from "../modules/Auction/MockAtomicAuctionModule.sol";

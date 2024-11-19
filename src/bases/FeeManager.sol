@@ -8,9 +8,9 @@ import {IFeeManager} from "../interfaces/IFeeManager.sol";
 import {Transfer} from "../lib/Transfer.sol";
 
 // External libraries
-import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
-import {ReentrancyGuard} from "@solmate-6.7.0/utils/ReentrancyGuard.sol";
-import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {ERC20} from "@solmate-6.8.0/tokens/ERC20.sol";
+import {ReentrancyGuard} from "@solmate-6.8.0/utils/ReentrancyGuard.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 
 import {Keycode} from "../modules/Keycode.sol";
 

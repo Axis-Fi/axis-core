@@ -1,30 +1,33 @@
-
-[[dependencies]]
-name = "forge-std"
-version = "1.9.1"
-source = "https://soldeer-revisions.s3.amazonaws.com/forge-std/v1_9_1_03-07-2024_14:44:59_forge-std-v1.9.1.zip"
-checksum = "110b35ad3604d91a919c521c71206c18cd07b29c750bd90b5cbbaf37288c9636"
-
-[[dependencies]]
-name = "solmate"
-version = "6.7.0"
-source = "git@github.com:transmissions11/solmate.git"
-checksum = "97bdb2003b70382996a79a406813f76417b1cf90"
-
-[[dependencies]]
-name = "solady"
-version = "0.0.124"
-source = "https://soldeer-revisions.s3.amazonaws.com/solady/0_0_124_22-01-2024_13:28:04_solady.zip"
-checksum = "9342385eaad08f9bb5408be0b41b241dd2b974c001f7da8c3b1ac552b52ce16b"
-
 [[dependencies]]
 name = "@openzeppelin-contracts"
 version = "4.9.2"
-source = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts/4_9_2_22-01-2024_13:13:52_contracts.zip"
+url = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts/4_9_2_22-01-2024_13:13:52_contracts.zip"
 checksum = "0f4450671798ea5659e6391876a3cf443ca50a696d9b556ac622ec7660bce306"
+integrity = "f69bd90f264280204b2a1172a02a2d20f3611f5993a61e5215647bec696a8420"
 
 [[dependencies]]
 name = "clones-with-immutable-args"
 version = "1.1.1"
-source = "git@github.com:wighawag/clones-with-immutable-args.git"
-checksum = "f5ca191afea933d50a36d101009b5644dc28bc99"
+git = "git@github.com:wighawag/clones-with-immutable-args.git"
+rev = "f5ca191afea933d50a36d101009b5644dc28bc99"
+
+[[dependencies]]
+name = "forge-std"
+version = "1.9.1"
+url = "https://soldeer-revisions.s3.amazonaws.com/forge-std/v1_9_1_03-07-2024_14:44:59_forge-std-v1.9.1.zip"
+checksum = "110b35ad3604d91a919c521c71206c18cd07b29c750bd90b5cbbaf37288c9636"
+integrity = "389f8bfe6b6aad01915b1e38e6d4839f8189e8d4792b42be4e10d0a96a358e3f"
+
+[[dependencies]]
+name = "solady"
+version = "0.0.124"
+url = "https://soldeer-revisions.s3.amazonaws.com/solady/0_0_124_22-01-2024_13:28:04_solady.zip"
+checksum = "9342385eaad08f9bb5408be0b41b241dd2b974c001f7da8c3b1ac552b52ce16b"
+integrity = "29d93e52694d8e858cf5a737257f4a6f21aefccaf803174fd00b9d686172ab27"
+
+[[dependencies]]
+name = "solmate"
+version = "6.8.0"
+url = "https://soldeer-revisions.s3.amazonaws.com/solmate/6_8_0_29-10-2024_19:01:45_solmate.zip"
+checksum = "e3ec0f0182cb3bbedecf8a0bcc39897266534a795ec732b2b03dafa285d78a5b"
+integrity = "a22e5a352de0231f671ee8adf5667bbe83c50012670083987bd1099a69feb429"

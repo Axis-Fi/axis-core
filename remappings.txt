@@ -1,5 +1,5 @@
-@forge-std-1.9.1=dependencies/forge-std-1.9.1/src
-@solmate-6.7.0=dependencies/solmate-6.7.0/src
-@solady-0.0.124=dependencies/solady-0.0.124/src
-@openzeppelin-contracts-4.9.2=dependencies/@openzeppelin-contracts-4.9.2
 @clones-with-immutable-args-1.1.1=dependencies/clones-with-immutable-args-1.1.1/src
+@forge-std-1.9.1=dependencies/forge-std-1.9.1/src
+@openzeppelin-contracts-4.9.2=dependencies/@openzeppelin-contracts-4.9.2
+@solady-0.0.124=dependencies/solady-0.0.124/src
+@solmate-6.8.0=dependencies/solmate-6.8.0/src

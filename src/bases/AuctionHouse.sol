@@ -13,8 +13,8 @@ import {Transfer} from "../lib/Transfer.sol";
 import {Callbacks} from "../lib/Callbacks.sol";
 
 // External libraries
-import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
-import {ReentrancyGuard} from "@solmate-6.7.0/utils/ReentrancyGuard.sol";
+import {ERC20} from "@solmate-6.8.0/tokens/ERC20.sol";
+import {ReentrancyGuard} from "@solmate-6.8.0/utils/ReentrancyGuard.sol";
 
 // Internal dependencies
 import {

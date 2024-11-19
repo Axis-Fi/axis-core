@@ -12,7 +12,7 @@ import {Veecode, toVeecode} from "../../Modules.sol";
 import {AtomicAuctionModule} from "../AtomicAuctionModule.sol";
 
 // External libraries
-import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 
 /// @title  FixedPriceSale
 /// @notice A module for creating fixed price sale (atomic) auctions

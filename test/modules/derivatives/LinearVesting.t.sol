@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 // Libraries
 import {Test} from "@forge-std-1.9.1/Test.sol";
 import {console2} from "@forge-std-1.9.1/console2.sol";
-import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 
 import {Permit2User} from "../../lib/permit2/Permit2User.sol";
 import {StringHelper} from "../../lib/String.sol";
