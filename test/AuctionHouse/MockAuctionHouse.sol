@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
 import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
 
-import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.8.0/tokens/ERC20.sol";
 import {Transfer} from "../../src/lib/Transfer.sol";
 
 import {AuctionHouse} from "../../src/bases/AuctionHouse.sol";

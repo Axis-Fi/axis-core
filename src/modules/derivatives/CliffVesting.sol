@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // import {ClonesWithImmutableArgs} from "@clones-with-immutable-args-1.1.1/ClonesWithImmutableArgs.sol";
-// import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
+// import {ERC20} from "@solmate-6.8.0/tokens/ERC20.sol";
 // import "./Derivative.sol";
 
 // // TODO this only uses the ERC20 clones, need to convert to ERC6909 with optional ERC20 via wrapping the ERC6909
