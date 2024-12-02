@@ -46,7 +46,7 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
 
     /// @inheritdoc Module
     function VEECODE() public pure override returns (Veecode) {
-        return toVeecode("01FPBA");
+        return toVeecode("02FPBA");
     }
 
     // ========== AUCTION ========== //
