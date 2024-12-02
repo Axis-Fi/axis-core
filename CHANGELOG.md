@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+- Fixed a bug in the Fixed Price Batch module that could result in an underflow when an auction was settled
+
 ## 1.0.1
 
 - Seller can now be a referrer to an auction and earn the referrer fee. This allows them to effectively not pay a fee when they direct traffic to their own auction
