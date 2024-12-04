@@ -124,7 +124,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
         // bidAmount is uint96, excess < fullFill, so bidAmount * excess / fullFill < bidAmount < uint96 max
         // We round up here to avoid over filling the auction, which has downstream effects
         uint96 refund = uint96(Math.fullMulDivUp(bidAmount_, excess, fullFill));
-        uint256 payout = fullFill - excess;
+        // Calculate the payout for the bid amount minus the refund
+        // We do this again instead of using the fullFill - excess to avoid rounding errors
+        uint256 payout = Math.fullMulDiv(bidAmount_ - refund, baseScale_, price_);
 
         return (PartialFill({bidId: bidId_, refund: refund, payout: payout}));
     }

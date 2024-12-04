@@ -287,4 +287,67 @@ contract FpbClaimBidsTest is FpbTest {
         IFixedPriceBatch.Bid memory bidDataTwo = _module.getBid(_lotId, 2);
         assertEq(uint8(bidDataTwo.status), uint8(IFixedPriceBatch.BidStatus.Claimed), "status");
     }
+
+    // bug encountered in prod
+    function test_partialFill_roundingError()
+        public
+        givenPrice(15_120_710_000_000)
+        givenMinFillPercent(100e2)
+        givenLotCapacity(1_000_000e18)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Auction parameters
+        // Capacity: 1,000,000 FLAPPY
+        // Price: 0.00001512071 ETH/FLAPPY
+        // Expected Proceeds: 15.12071 ETH
+
+        // Observed results with complete fill:
+        // Tokens Sold: 999999.999999999999933865 FLAPPY
+        // Proceeds: 15.120709999999999999 ETH
+        // The reason these values are lower is that we introduced rounding behavior
+        // so that the refund on a partial fill would be slightly larger to not oversell
+        // the auction. If oversold, settle bricks so we round up the refund to prevent this.
+
+        // However, the partial fill payout ended up being too high and caused an error
+        // when that user went to claim their bid. This is because a refund of 0.000000000000066135 FLAPPY
+        // was sent from the auction house back to the callback on settlement since the sold value was
+        // less than the capacity. Thus, the auction house did not have enough capacity to pay out all
+        // of the successful bids at that point (it was 0.000000000000066105 FLAPPY short).
+
+        // To recreate this, we submit two bids. The first is for all the capacity that was expended before
+        // the partial bid was placed, and the second bid is the same as the observed partial bid.
+
+        // The partial bid was for 0.3 ETH and they received:
+        // Filled: 0.083710000000000000 ETH
+        // Refund: 0.216290000000000001 ETH
+        // Payout: 5,536.11569827078225824 FLAPPY
+
+        // The first bid should then be for 15.12071 - 0.08371 ETH = 15.037 ETH
+        vm.prank(address(_auctionHouse));
+        uint64 id1 =
+            _module.bid(_lotId, _BIDDER, _REFERRER, 15_037_000_000_000_000_000, abi.encode(""));
+
+        // The second bid should be for 0.3 ETH
+        vm.prank(address(_auctionHouse));
+        uint64 id2 = _module.bid(_lotId, _BIDDER, _REFERRER, 3e17, abi.encode(""));
+
+        // Settle the auction
+        vm.prank(address(_auctionHouse));
+        (uint256 totalIn, uint256 totalOut,, bool finished,) = _module.settle(_lotId, 2);
+
+        // Check that the auction is settled and the results are what we expect
+        assertEq(totalIn, 15_120_709_999_999_999_999);
+        assertEq(totalOut, 999_999_999_999_999_999_933_865);
+        assertTrue(finished);
+
+        // Assert that the total out is equal to the capacity minus the refund sent to the seller
+        assertEq(totalOut, 1_000_000e18 - 66_135);
+
+        // Validate that the bid claims add up to less than or equal the total out
+        IBatchAuction.BidClaim memory bidClaim1 = _module.getBidClaim(_lotId, id1);
+        IBatchAuction.BidClaim memory bidClaim2 = _module.getBidClaim(_lotId, id2);
+
+        assertLe(bidClaim1.payout + bidClaim2.payout, totalOut);
+    }
 }
