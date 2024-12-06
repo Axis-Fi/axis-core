@@ -7,6 +7,7 @@ import {IBatchAuction} from "../../../../src/interfaces/modules/IBatchAuction.so
 import {IFixedPriceBatch} from "../../../../src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 
 import {FpbTest} from "./FPBTest.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
 contract FpbClaimBidsTest is FpbTest {
     // [X] when the caller is not the parent
@@ -349,5 +350,66 @@ contract FpbClaimBidsTest is FpbTest {
         IBatchAuction.BidClaim memory bidClaim2 = _module.getBidClaim(_lotId, id2);
 
         assertLe(bidClaim1.payout + bidClaim2.payout, totalOut);
+    }
+
+    function testFuzz_partialFill_roundingError(
+        uint96 price_,
+        uint24 percentRemaining_,
+        uint96 amount_
+    ) public givenMinFillPercent(100e2) {
+        // Assume the price is less than 1e27 and greater than 1e9 (+/- 9 decimals)
+        // Use uint96 to get fewer rejections since it's max is close to 1e27 (~8e28)
+        vm.assume(price_ >= 1e9 && price_ <= 1e27);
+
+        _setPrice(uint256(price_));
+
+        // Create a lot
+        _createAuctionLot();
+
+        // Start the lot
+        _startLot();
+
+        // Set the percent remaining as something less than 100%
+        uint256 percentRemaining = uint256(percentRemaining_) % _ONE_HUNDRED_PERCENT;
+        vm.assume(percentRemaining > 0);
+
+        console2.log("percentRemaining", percentRemaining);
+        console2.log("price", price_);
+        console2.log("amount", amount_);
+
+        // Calculate the first bid amount as a percentage of the total amount
+        uint256 capacityInQuote = (_auctionParams.capacity * price_) / _BASE_SCALE;
+        console2.log("capacityInQuote", capacityInQuote);
+        uint256 firstBidAmount =
+            capacityInQuote * (_ONE_HUNDRED_PERCENT - percentRemaining) / _ONE_HUNDRED_PERCENT;
+        uint256 remaining = capacityInQuote - firstBidAmount;
+        uint256 secondBidAmount = amount_ < remaining ? remaining + 1 : amount_;
+
+        console2.log("firstBidAmount", firstBidAmount);
+        console2.log("secondBidAmount", secondBidAmount);
+
+        // Submit the first bid, auction should not be filled completely
+        vm.prank(address(_auctionHouse));
+        uint64 id1 = _module.bid(_lotId, _BIDDER, _REFERRER, firstBidAmount, abi.encode(""));
+
+        // Submit the second bid, auction should be filled completely and this bid should be a partial fill
+        vm.prank(address(_auctionHouse));
+        uint64 id2 = _module.bid(_lotId, _BIDDER, _REFERRER, secondBidAmount, abi.encode(""));
+
+        // Settle the auction
+        vm.prank(address(_auctionHouse));
+        (uint256 totalIn, uint256 totalOut,, bool finished,) = _module.settle(_lotId, 2);
+
+        // Check that the auction is settled and the results are what we expect
+        // assertLe(totalIn, capacityInQuote, "totalIn"); This isn't necessarily required, we can handle a slightly higher totalIn
+        assertLe(totalOut, _auctionParams.capacity, "totalOut");
+        assertTrue(finished, "finished");
+
+        // Validate that the bid claims add up to less than or equal the total out
+        IBatchAuction.BidClaim memory bidClaim1 = _module.getBidClaim(_lotId, id1);
+        IBatchAuction.BidClaim memory bidClaim2 = _module.getBidClaim(_lotId, id2);
+
+        assertLe(bidClaim1.payout + bidClaim2.payout, totalOut);
+        assertGe(bidClaim1.paid + bidClaim2.paid - bidClaim2.refund, totalIn);
     }
 }
