@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3
+
+- Fixed a bug in the Fixed Price Batch module calculating the payout of a partially filled bid. This was introduced in v1.0.2 when the underflow bug was fixed.
+
 ## 1.0.2
 
 - Fixed a bug in the Fixed Price Batch module that could result in an underflow when an auction was settled
