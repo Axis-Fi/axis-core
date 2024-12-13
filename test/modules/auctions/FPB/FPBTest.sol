@@ -26,6 +26,7 @@ abstract contract FpbTest is Test, Permit2User {
     uint48 internal constant _DURATION = 1 days;
     uint24 internal constant _MIN_FILL_PERCENT = 50e2; // 50%
     uint256 internal constant _PRICE = 2e18;
+    uint24 internal constant _ONE_HUNDRED_PERCENT = 100e2;
 
     BatchAuctionHouse internal _auctionHouse;
     FixedPriceBatch internal _module;
