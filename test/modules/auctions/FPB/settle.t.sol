@@ -219,4 +219,61 @@ contract FpbSettleTest is FpbTest {
         console2.log("settlementCleared final  ==>  ", auctionDataFinal.settlementCleared);
         assert(auctionDataFinal.settlementCleared);
     }
+
+    // Added due to scenario encountered in the wild
+    function test_settle_lowPrice_doesNotBrick()
+        public
+        givenPrice(15_120_710_000_000)
+        givenMinFillPercent(100e2)
+        givenLotCapacity(1_000_000e18)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Overbid
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, 15_120_710_000_000_000_001, abi.encode(""));
+
+        // Settle the auction
+        vm.prank(address(_auctionHouse));
+        (uint256 totalIn, uint256 totalOut, uint256 capacity,,) = _module.settle(_lotId, 0);
+
+        // Ensure the total out is not more than the capacity
+        console2.log("totalOut  ==>  ", totalOut);
+        console2.log("capacity  ==>  ", capacity);
+        console2.log("totalIn   ==>  ", totalIn);
+
+        assertLe(totalOut, capacity);
+        assertLe(totalIn, 15_120_710_000_000_000_000);
+    }
+
+    function testFuzz_settle_partialFill_doesNotBrick(
+        uint96 price_,
+        uint96 capacity_,
+        uint96 amount_
+    ) public givenMinFillPercent(100e2) {
+        // Don't test really low values
+        // We limit the inputs to uint96 to avoid very high values
+        vm.assume(price_ > 1e6);
+        vm.assume(capacity_ > 1e6);
+        vm.assume(amount_ > uint256(price_) * uint256(capacity_) / 1e18);
+
+        _setPrice(uint256(price_));
+        _setCapacity(uint256(capacity_));
+        _createAuctionLot();
+        _startLot();
+
+        // Overbid
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, amount_, abi.encode(""));
+
+        // Settle the auction
+        vm.prank(address(_auctionHouse));
+        (, uint256 totalOut, uint256 capacity,,) = _module.settle(_lotId, 0);
+
+        // Ensure the total out is not more than the capacity
+        console2.log("totalOut  ==>  ", totalOut);
+        console2.log("capacity  ==>  ", capacity);
+
+        assertLe(totalOut, capacity);
+    }
 }
