@@ -2,7 +2,7 @@
   "sequence": [
     {
       "name": "FixedPriceBatch",
-      "installBatchAuctionHouse": true
+      "installBatchAuctionHouse": false
     }
   ]
 }
