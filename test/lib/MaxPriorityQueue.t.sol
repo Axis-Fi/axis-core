@@ -303,6 +303,7 @@ contract MaxPriorityQueueTest is Test {
         assertEq(_queue.isEmpty(), true, "isEmpty mismatch");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_insert_zeroAmountOut_reverts() external {
         _queue.initialize();
 
@@ -334,6 +335,7 @@ contract MaxPriorityQueueTest is Test {
         assertEq(amountOut, 1e18);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_insert_bidAlreadyExists() external {
         _queue.initialize();
 
@@ -344,6 +346,7 @@ contract MaxPriorityQueueTest is Test {
         _queue.insert(_QUEUE_START, 0, 1, 1, _BASE_SCALE);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_insert_prevHintDoesNotExist() external {
         _queue.initialize();
 
@@ -355,6 +358,7 @@ contract MaxPriorityQueueTest is Test {
         _queue.insert(keyNotInQueue, 0, 1, 1, _BASE_SCALE);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_insert_bidHigherPriorityThanHint() external {
         _queue.initialize();
 
@@ -415,6 +419,8 @@ contract MaxPriorityQueueTest is Test {
     }
 
     // ========== delMax ========== //
+
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_delMax_emptyQueue() external {
         _queue.initialize();
 
