@@ -85,7 +85,9 @@ abstract contract EmpTest is Test, Permit2User {
 
     // ======== Modifiers ======== //
 
-    function _setQuoteTokenDecimals(uint8 decimals_) internal {
+    function _setQuoteTokenDecimals(
+        uint8 decimals_
+    ) internal {
         _quoteTokenDecimals = decimals_;
 
         _auctionDataParams.minPrice = _scaleQuoteTokenAmount(_MIN_PRICE);
@@ -94,28 +96,38 @@ abstract contract EmpTest is Test, Permit2User {
         _auctionParams.implParams = abi.encode(_auctionDataParams);
     }
 
-    modifier givenQuoteTokenDecimals(uint8 decimals_) {
+    modifier givenQuoteTokenDecimals(
+        uint8 decimals_
+    ) {
         _setQuoteTokenDecimals(decimals_);
         _;
     }
 
-    function _setBaseTokenDecimals(uint8 decimals_) internal {
+    function _setBaseTokenDecimals(
+        uint8 decimals_
+    ) internal {
         _baseTokenDecimals = decimals_;
 
         _auctionParams.capacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
     }
 
-    modifier givenBaseTokenDecimals(uint8 decimals_) {
+    modifier givenBaseTokenDecimals(
+        uint8 decimals_
+    ) {
         _setBaseTokenDecimals(decimals_);
         _;
     }
 
-    modifier givenLotCapacity(uint256 capacity_) {
+    modifier givenLotCapacity(
+        uint256 capacity_
+    ) {
         _auctionParams.capacity = capacity_;
         _;
     }
 
-    modifier givenMinimumPrice(uint256 price_) {
+    modifier givenMinimumPrice(
+        uint256 price_
+    ) {
         _auctionDataParams.minPrice = price_;
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
@@ -123,24 +135,32 @@ abstract contract EmpTest is Test, Permit2User {
         _;
     }
 
-    modifier givenStartTimestamp(uint48 start_) {
+    modifier givenStartTimestamp(
+        uint48 start_
+    ) {
         _auctionParams.start = start_;
         _;
     }
 
-    modifier givenDuration(uint48 duration_) {
+    modifier givenDuration(
+        uint48 duration_
+    ) {
         _auctionParams.duration = duration_;
         _;
     }
 
-    modifier givenMinimumFillPercentage(uint24 percentage_) {
+    modifier givenMinimumFillPercentage(
+        uint24 percentage_
+    ) {
         _auctionDataParams.minFillPercent = percentage_;
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
         _;
     }
 
-    modifier givenMinimumBidSize(uint256 amount_) {
+    modifier givenMinimumBidSize(
+        uint256 amount_
+    ) {
         _auctionDataParams.minBidSize = amount_;
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
@@ -174,7 +194,9 @@ abstract contract EmpTest is Test, Permit2User {
         _;
     }
 
-    function _formatBid(uint256 amountOut_) internal pure returns (uint256) {
+    function _formatBid(
+        uint256 amountOut_
+    ) internal pure returns (uint256) {
         uint256 formattedAmountOut;
         {
             uint128 subtracted;
@@ -258,7 +280,9 @@ abstract contract EmpTest is Test, Permit2User {
         _;
     }
 
-    modifier givenBidIsRefunded(uint64 bidId_) {
+    modifier givenBidIsRefunded(
+        uint64 bidId_
+    ) {
         // Find bid index
 
         // Get number of bids from module
@@ -283,7 +307,9 @@ abstract contract EmpTest is Test, Permit2User {
         _;
     }
 
-    modifier givenBidIsClaimed(uint64 bidId_) {
+    modifier givenBidIsClaimed(
+        uint64 bidId_
+    ) {
         uint64[] memory bidIds = new uint64[](1);
         bidIds[0] = bidId_;
 
@@ -367,11 +393,15 @@ abstract contract EmpTest is Test, Permit2User {
 
     // ======== Internal Functions ======== //
 
-    function _scaleQuoteTokenAmount(uint256 amount_) internal view returns (uint256) {
+    function _scaleQuoteTokenAmount(
+        uint256 amount_
+    ) internal view returns (uint256) {
         return Math.fullMulDiv(amount_, 10 ** _quoteTokenDecimals, _BASE_SCALE);
     }
 
-    function _scaleBaseTokenAmount(uint256 amount_) internal view returns (uint256) {
+    function _scaleBaseTokenAmount(
+        uint256 amount_
+    ) internal view returns (uint256) {
         return Math.fullMulDiv(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
     }
 
@@ -406,7 +436,9 @@ abstract contract EmpTest is Test, Permit2User {
         });
     }
 
-    function _getAuctionLot(uint96 lotId_) internal view returns (IAuction.Lot memory) {
+    function _getAuctionLot(
+        uint96 lotId_
+    ) internal view returns (IAuction.Lot memory) {
         return _module.getLot(lotId_);
     }
 

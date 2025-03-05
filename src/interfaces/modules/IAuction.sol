@@ -120,7 +120,9 @@ interface IAuction {
     ///             - Update the lot data
     ///
     /// @param      lotId_              The lot id
-    function cancelAuction(uint96 lotId_) external;
+    function cancelAuction(
+        uint96 lotId_
+    ) external;
 
     // ========== AUCTION INFORMATION ========== //
 
@@ -131,7 +133,9 @@ interface IAuction {
     ///
     /// @param      lotId_  The lot id
     /// @return     bool    Whether or not the lot is active
-    function isLive(uint96 lotId_) external view returns (bool);
+    function isLive(
+        uint96 lotId_
+    ) external view returns (bool);
 
     /// @notice     Returns whether the auction is upcoming
     /// @dev        The implementing function should handle the following:
@@ -140,7 +144,9 @@ interface IAuction {
     ///
     /// @param      lotId_  The lot id
     /// @return     bool    Whether or not the lot is upcoming
-    function isUpcoming(uint96 lotId_) external view returns (bool);
+    function isUpcoming(
+        uint96 lotId_
+    ) external view returns (bool);
 
     /// @notice     Returns whether the auction has ended
     /// @dev        The implementing function should handle the following:
@@ -149,7 +155,9 @@ interface IAuction {
     ///
     /// @param      lotId_  The lot id
     /// @return     bool    Whether or not the lot is active
-    function hasEnded(uint96 lotId_) external view returns (bool);
+    function hasEnded(
+        uint96 lotId_
+    ) external view returns (bool);
 
     /// @notice     Get the remaining capacity of a lot
     /// @dev        The implementing function should handle the following:
@@ -157,7 +165,9 @@ interface IAuction {
     ///
     /// @param      lotId_  The lot id
     /// @return     uint96 The remaining capacity of the lot
-    function remainingCapacity(uint96 lotId_) external view returns (uint256);
+    function remainingCapacity(
+        uint96 lotId_
+    ) external view returns (uint256);
 
     /// @notice     Get whether or not the capacity is in quote tokens
     /// @dev        The implementing function should handle the following:
@@ -166,12 +176,16 @@ interface IAuction {
     ///
     /// @param      lotId_  The lot id
     /// @return     bool    Whether or not the capacity is in quote tokens
-    function capacityInQuote(uint96 lotId_) external view returns (bool);
+    function capacityInQuote(
+        uint96 lotId_
+    ) external view returns (bool);
 
     /// @notice     Get the lot data for a given lot ID
     ///
     /// @param     lotId_  The lot ID
-    function getLot(uint96 lotId_) external view returns (Lot memory);
+    function getLot(
+        uint96 lotId_
+    ) external view returns (Lot memory);
 
     /// @notice     Get the auction type
     function auctionType() external view returns (AuctionType);

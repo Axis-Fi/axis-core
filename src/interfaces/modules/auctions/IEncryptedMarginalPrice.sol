@@ -177,7 +177,9 @@ interface IEncryptedMarginalPrice {
     ///
     /// @param      lotId_  The lot ID
     /// @return     numBids The number of decrypted bids remaining in the queue
-    function getNumBidsInQueue(uint96 lotId_) external view returns (uint256 numBids);
+    function getNumBidsInQueue(
+        uint96 lotId_
+    ) external view returns (uint256 numBids);
 
     // ========== AUCTION INFORMATION ========== //
 

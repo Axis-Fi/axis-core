@@ -200,12 +200,16 @@ interface IAuctionHouse {
     ///
     /// @param      lotId_  ID of the auction lot
     /// @return     module  The auction module
-    function getAuctionModuleForId(uint96 lotId_) external view returns (IAuction module);
+    function getAuctionModuleForId(
+        uint96 lotId_
+    ) external view returns (IAuction module);
 
     /// @notice     Gets the derivative module for a given lot ID
     /// @dev        Will revert if the lot does not have a derivative module
     ///
     /// @param      lotId_  ID of the auction lot
     /// @return     module  The derivative module
-    function getDerivativeModuleForId(uint96 lotId_) external view returns (IDerivative module);
+    function getDerivativeModuleForId(
+        uint96 lotId_
+    ) external view returns (IDerivative module);
 }

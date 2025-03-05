@@ -1,7 +1,19 @@
 {
   "sequence": [
     {
+      "name": "BatchAuctionHouse"
+    },
+    {
+      "name": "BatchCatalogue"
+    },
+    {
       "name": "FixedPriceBatch",
+      "installBatchAuctionHouse": true,
+      "maxReferrerFee": 1000,
+      "maxCuratorFee": 1000
+    },
+    {
+      "name": "BatchLinearVesting",
       "installBatchAuctionHouse": true
     }
   ]

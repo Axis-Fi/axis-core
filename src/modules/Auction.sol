@@ -19,7 +19,9 @@ abstract contract AuctionModule is IAuction, Module {
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address auctionHouse_) Module(auctionHouse_) {}
+    constructor(
+        address auctionHouse_
+    ) Module(auctionHouse_) {}
 
     /// @inheritdoc Module
     function TYPE() public pure override returns (Type) {
@@ -95,7 +97,9 @@ abstract contract AuctionModule is IAuction, Module {
     ///             - the lot has concluded
     ///
     /// @param      lotId_      The lot id
-    function cancelAuction(uint96 lotId_) external virtual override onlyInternal {
+    function cancelAuction(
+        uint96 lotId_
+    ) external virtual override onlyInternal {
         // Validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotConcluded(lotId_);
@@ -114,7 +118,9 @@ abstract contract AuctionModule is IAuction, Module {
     /// @dev        Auction modules should override this to perform any additional logic
     ///
     /// @param      lotId_      The lot ID
-    function _cancelAuction(uint96 lotId_) internal virtual;
+    function _cancelAuction(
+        uint96 lotId_
+    ) internal virtual;
 
     // ========== AUCTION INFORMATION ========== //
 
@@ -126,7 +132,9 @@ abstract contract AuctionModule is IAuction, Module {
     ///
     /// @param      lotId_  The lot ID
     /// @return     bool    Whether or not the lot is active
-    function isLive(uint96 lotId_) public view override returns (bool) {
+    function isLive(
+        uint96 lotId_
+    ) public view override returns (bool) {
         return (
             lotData[lotId_].capacity != 0 && uint48(block.timestamp) < lotData[lotId_].conclusion
                 && uint48(block.timestamp) >= lotData[lotId_].start
@@ -134,7 +142,9 @@ abstract contract AuctionModule is IAuction, Module {
     }
 
     /// @inheritdoc IAuction
-    function isUpcoming(uint96 lotId_) public view override returns (bool) {
+    function isUpcoming(
+        uint96 lotId_
+    ) public view override returns (bool) {
         return (
             lotData[lotId_].capacity != 0 && uint48(block.timestamp) < lotData[lotId_].conclusion
                 && uint48(block.timestamp) < lotData[lotId_].start
@@ -142,23 +152,31 @@ abstract contract AuctionModule is IAuction, Module {
     }
 
     /// @inheritdoc IAuction
-    function hasEnded(uint96 lotId_) public view override returns (bool) {
+    function hasEnded(
+        uint96 lotId_
+    ) public view override returns (bool) {
         return
             uint48(block.timestamp) >= lotData[lotId_].conclusion || lotData[lotId_].capacity == 0;
     }
 
     /// @inheritdoc IAuction
-    function remainingCapacity(uint96 lotId_) external view override returns (uint256) {
+    function remainingCapacity(
+        uint96 lotId_
+    ) external view override returns (uint256) {
         return lotData[lotId_].capacity;
     }
 
     /// @inheritdoc IAuction
-    function capacityInQuote(uint96 lotId_) external view override returns (bool) {
+    function capacityInQuote(
+        uint96 lotId_
+    ) external view override returns (bool) {
         return lotData[lotId_].capacityInQuote;
     }
 
     /// @inheritdoc IAuction
-    function getLot(uint96 lotId_) external view override returns (Lot memory) {
+    function getLot(
+        uint96 lotId_
+    ) external view override returns (Lot memory) {
         return lotData[lotId_];
     }
 
@@ -167,7 +185,9 @@ abstract contract AuctionModule is IAuction, Module {
     /// @notice     Set the minimum auction duration
     /// @dev        This function must be called by the parent AuctionHouse, and
     ///             can be called by governance using `execOnModule`.
-    function setMinAuctionDuration(uint48 duration_) external onlyParent {
+    function setMinAuctionDuration(
+        uint48 duration_
+    ) external onlyParent {
         minAuctionDuration = duration_;
     }
 
@@ -178,25 +198,33 @@ abstract contract AuctionModule is IAuction, Module {
     ///             Inheriting contracts can override this to implement custom logic
     ///
     /// @param      lotId_  The lot ID
-    function _revertIfLotInvalid(uint96 lotId_) internal view virtual {
+    function _revertIfLotInvalid(
+        uint96 lotId_
+    ) internal view virtual {
         if (lotData[lotId_].start == 0) revert Auction_InvalidLotId(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has not started
     /// @dev        Should revert if the lot has not started
-    function _revertIfBeforeLotStart(uint96 lotId_) internal view virtual {
+    function _revertIfBeforeLotStart(
+        uint96 lotId_
+    ) internal view virtual {
         if (uint48(block.timestamp) < lotData[lotId_].start) revert Auction_LotNotActive(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has started
     /// @dev        Should revert if the lot has started
-    function _revertIfLotStarted(uint96 lotId_) internal view virtual {
+    function _revertIfLotStarted(
+        uint96 lotId_
+    ) internal view virtual {
         if (uint48(block.timestamp) >= lotData[lotId_].start) revert Auction_LotActive(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has not concluded
     /// @dev        Should revert if the lot has not concluded
-    function _revertIfBeforeLotConcluded(uint96 lotId_) internal view virtual {
+    function _revertIfBeforeLotConcluded(
+        uint96 lotId_
+    ) internal view virtual {
         if (uint48(block.timestamp) < lotData[lotId_].conclusion && lotData[lotId_].capacity > 0) {
             revert Auction_LotNotConcluded(lotId_);
         }
@@ -204,7 +232,9 @@ abstract contract AuctionModule is IAuction, Module {
 
     /// @notice     Checks that the lot represented by `lotId_` has not concluded
     /// @dev        Should revert if the lot has concluded
-    function _revertIfLotConcluded(uint96 lotId_) internal view virtual {
+    function _revertIfLotConcluded(
+        uint96 lotId_
+    ) internal view virtual {
         // Beyond the conclusion time
         if (uint48(block.timestamp) >= lotData[lotId_].conclusion) {
             revert Auction_LotNotActive(lotId_);
@@ -219,7 +249,9 @@ abstract contract AuctionModule is IAuction, Module {
     ///             Inheriting contracts can override this to implement custom logic
     ///
     /// @param      lotId_  The lot ID
-    function _revertIfLotInactive(uint96 lotId_) internal view virtual {
+    function _revertIfLotInactive(
+        uint96 lotId_
+    ) internal view virtual {
         if (!isLive(lotId_)) revert Auction_LotNotActive(lotId_);
     }
 
@@ -228,7 +260,9 @@ abstract contract AuctionModule is IAuction, Module {
     ///             Inheriting contracts can override this to implement custom logic
     ///
     /// @param      lotId_  The lot ID
-    function _revertIfLotActive(uint96 lotId_) internal view virtual {
+    function _revertIfLotActive(
+        uint96 lotId_
+    ) internal view virtual {
         if (isLive(lotId_)) revert Auction_LotActive(lotId_);
     }
 }

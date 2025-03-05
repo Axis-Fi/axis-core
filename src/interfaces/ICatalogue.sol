@@ -24,27 +24,39 @@ interface ICatalogue {
     ///             - The lot ID is invalid
     ///
     /// @param      lotId_  ID of the auction lot
-    function getRouting(uint96 lotId_) external view returns (IAuctionHouse.Routing memory);
+    function getRouting(
+        uint96 lotId_
+    ) external view returns (IAuctionHouse.Routing memory);
 
     /// @notice    Gets the fee data for a given lot ID
     /// @dev       The function reverts if:
     ///             - The lot ID is invalid
     ///
     /// @param      lotId_  ID of the auction lot
-    function getFeeData(uint96 lotId_) external view returns (IAuctionHouse.FeeData memory);
+    function getFeeData(
+        uint96 lotId_
+    ) external view returns (IAuctionHouse.FeeData memory);
 
     /// @notice    Is the auction currently accepting bids or purchases?
     /// @dev       Auctions that have been created, but not yet started will return false
-    function isLive(uint96 lotId_) external view returns (bool);
+    function isLive(
+        uint96 lotId_
+    ) external view returns (bool);
 
     /// @notice    Is the auction upcoming? (i.e. has not started yet)
-    function isUpcoming(uint96 lotId_) external view returns (bool);
+    function isUpcoming(
+        uint96 lotId_
+    ) external view returns (bool);
 
     /// @notice    Has the auction ended? (i.e. reached its conclusion and no more bids/purchases can be made)
-    function hasEnded(uint96 lotId_) external view returns (bool);
+    function hasEnded(
+        uint96 lotId_
+    ) external view returns (bool);
 
     /// @notice    Capacity remaining for the auction. May be in quote or base tokens, depending on what is allowed for the auction type
-    function remainingCapacity(uint96 lotId_) external view returns (uint256);
+    function remainingCapacity(
+        uint96 lotId_
+    ) external view returns (uint256);
 
     // ========== RETRIEVING AUCTIONS ========== //
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.8.0/tokens/ERC20.sol";
 
 import {BaseCallback} from "../../src/bases/BaseCallback.sol";
 import {Callbacks} from "../../src/lib/Callbacks.sol";
@@ -120,8 +120,7 @@ contract MockCallback is BaseCallback {
 
         if (prefunded_) {
             // Do nothing, as tokens have already been transferred
-        }
-        else {
+        } else {
             if (onPurchaseMultiplier > 0) {
                 payout_ = uint96(uint256(payout_) * onPurchaseMultiplier / 100e2);
             }
@@ -159,43 +158,63 @@ contract MockCallback is BaseCallback {
         lotSettled[lotId_] = true;
     }
 
-    function setOnCreateReverts(bool reverts_) external {
+    function setOnCreateReverts(
+        bool reverts_
+    ) external {
         onCreateReverts = reverts_;
     }
 
-    function setOnCancelReverts(bool reverts_) external {
+    function setOnCancelReverts(
+        bool reverts_
+    ) external {
         onCancelReverts = reverts_;
     }
 
-    function setOnCurateReverts(bool reverts_) external {
+    function setOnCurateReverts(
+        bool reverts_
+    ) external {
         onCurateReverts = reverts_;
     }
 
-    function setOnPurchaseReverts(bool reverts_) external {
+    function setOnPurchaseReverts(
+        bool reverts_
+    ) external {
         onPurchaseReverts = reverts_;
     }
 
-    function setOnBidReverts(bool reverts_) external {
+    function setOnBidReverts(
+        bool reverts_
+    ) external {
         onBidReverts = reverts_;
     }
 
-    function setOnSettleReverts(bool reverts_) external {
+    function setOnSettleReverts(
+        bool reverts_
+    ) external {
         onSettleReverts = reverts_;
     }
 
-    function setOnCreateMultiplier(uint48 multiplier_) external {
+    function setOnCreateMultiplier(
+        uint48 multiplier_
+    ) external {
         onCreateMultiplier = multiplier_;
     }
 
-    function setOnCurateMultiplier(uint48 multiplier_) external {
+    function setOnCurateMultiplier(
+        uint48 multiplier_
+    ) external {
         onCurateMultiplier = multiplier_;
     }
 
-    function setOnPurchaseMultiplier(uint48 multiplier_) external {
+    function setOnPurchaseMultiplier(
+        uint48 multiplier_
+    ) external {
         onPurchaseMultiplier = multiplier_;
     }
 
-    function setAllowlistEnabled(bool enabled_) external {
+    function setAllowlistEnabled(
+        bool enabled_
+    ) external {
         allowlistEnabled = enabled_;
     }
 

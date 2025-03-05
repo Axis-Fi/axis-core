@@ -45,7 +45,9 @@ contract CollectPaymentTest is Test, Permit2User {
         _user = vm.addr(_userKey);
     }
 
-    modifier givenUserHasBalance(uint256 amount_) {
+    modifier givenUserHasBalance(
+        uint256 amount_
+    ) {
         _quoteToken.mint(_user, amount_);
         _;
     }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 
 import {Module} from "../../../../src/modules/Modules.sol";
 import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
@@ -1072,7 +1072,9 @@ contract EmpSettleTest is EmpTest {
         _;
     }
 
-    function _setSettlementComplete(bool complete_) internal {
+    function _setSettlementComplete(
+        bool complete_
+    ) internal {
         _expectedSettlementComplete = complete_;
     }
 

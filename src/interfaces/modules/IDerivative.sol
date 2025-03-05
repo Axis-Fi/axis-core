@@ -103,7 +103,9 @@ interface IDerivative {
     /// @notice     Redeem all available derivative tokens for underlying collateral
     ///
     /// @param      tokenId_    The ID of the derivative token to redeem
-    function redeemMax(uint256 tokenId_) external;
+    function redeemMax(
+        uint256 tokenId_
+    ) external;
 
     /// @notice     Redeem derivative tokens for underlying collateral
     ///
@@ -137,7 +139,9 @@ interface IDerivative {
     /// @notice     Access controlled: only callable by the derivative issuer via the auction house.
     ///
     /// @param      tokenId_    The ID of the derivative token to reclaim
-    function reclaim(uint256 tokenId_) external;
+    function reclaim(
+        uint256 tokenId_
+    ) external;
 
     /// @notice     Transforms an existing derivative issued by this contract into something else. Derivative is burned and collateral sent to the auction house.
     /// @notice     Access controlled: only callable by the auction house.
@@ -187,5 +191,7 @@ interface IDerivative {
     ///
     /// @param      tokenId     The ID of the derivative token
     /// @return     tokenData   The metadata for the derivative token
-    function getTokenMetadata(uint256 tokenId) external view returns (Token memory tokenData);
+    function getTokenMetadata(
+        uint256 tokenId
+    ) external view returns (Token memory tokenData);
 }

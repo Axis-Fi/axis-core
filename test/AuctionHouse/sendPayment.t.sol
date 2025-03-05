@@ -71,7 +71,9 @@ contract SendPaymentTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    modifier givenRouterHasBalance(uint256 amount_) {
+    modifier givenRouterHasBalance(
+        uint256 amount_
+    ) {
         _quoteToken.mint(address(_auctionHouse), amount_);
         _;
     }

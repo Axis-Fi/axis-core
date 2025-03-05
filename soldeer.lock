@@ -7,9 +7,9 @@ checksum = "110b35ad3604d91a919c521c71206c18cd07b29c750bd90b5cbbaf37288c9636"
 
 [[dependencies]]
 name = "solmate"
-version = "6.7.0"
-source = "git@github.com:transmissions11/solmate.git"
-checksum = "97bdb2003b70382996a79a406813f76417b1cf90"
+version = "6.8.0"
+source = "https://soldeer-revisions.s3.amazonaws.com/solmate/6_8_0_29-10-2024_19:01:45_solmate.zip"
+checksum = "e3ec0f0182cb3bbedecf8a0bcc39897266534a795ec732b2b03dafa285d78a5b"
 
 [[dependencies]]
 name = "solady"

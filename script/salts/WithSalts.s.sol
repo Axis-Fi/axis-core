@@ -16,7 +16,9 @@ contract WithSalts is Script {
         return string.concat("./", _BYTECODE_DIR);
     }
 
-    function _getBytecodePath(string memory name_) internal pure returns (string memory) {
+    function _getBytecodePath(
+        string memory name_
+    ) internal pure returns (string memory) {
         return string.concat(_getBytecodeDirectory(), "/", name_, ".bin");
     }
 

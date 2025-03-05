@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "@forge-std-1.9.1/Test.sol";
-import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 
 // Mocks
 import {Permit2User} from "../../../lib/permit2/Permit2User.sol";
@@ -62,7 +62,9 @@ abstract contract FpsTest is Test, Permit2User {
 
     // ========== MODIFIERS ========== //
 
-    function _setQuoteTokenDecimals(uint8 decimals_) internal {
+    function _setQuoteTokenDecimals(
+        uint8 decimals_
+    ) internal {
         _quoteTokenDecimals = decimals_;
 
         _fpaParams.price = _scaleQuoteTokenAmount(_PRICE);
@@ -74,12 +76,16 @@ abstract contract FpsTest is Test, Permit2User {
         }
     }
 
-    modifier givenQuoteTokenDecimals(uint8 decimals_) {
+    modifier givenQuoteTokenDecimals(
+        uint8 decimals_
+    ) {
         _setQuoteTokenDecimals(decimals_);
         _;
     }
 
-    function _setBaseTokenDecimals(uint8 decimals_) internal {
+    function _setBaseTokenDecimals(
+        uint8 decimals_
+    ) internal {
         _baseTokenDecimals = decimals_;
 
         if (!_auctionParams.capacityInQuote) {
@@ -87,22 +93,30 @@ abstract contract FpsTest is Test, Permit2User {
         }
     }
 
-    modifier givenBaseTokenDecimals(uint8 decimals_) {
+    modifier givenBaseTokenDecimals(
+        uint8 decimals_
+    ) {
         _setBaseTokenDecimals(decimals_);
         _;
     }
 
-    modifier givenLotCapacity(uint256 capacity_) {
+    modifier givenLotCapacity(
+        uint256 capacity_
+    ) {
         _auctionParams.capacity = capacity_;
         _;
     }
 
-    modifier givenStartTimestamp(uint48 start_) {
+    modifier givenStartTimestamp(
+        uint48 start_
+    ) {
         _auctionParams.start = start_;
         _;
     }
 
-    modifier givenDuration(uint48 duration_) {
+    modifier givenDuration(
+        uint48 duration_
+    ) {
         _auctionParams.duration = duration_;
         _;
     }
@@ -122,18 +136,24 @@ abstract contract FpsTest is Test, Permit2User {
         _;
     }
 
-    modifier givenPrice(uint256 price_) {
+    modifier givenPrice(
+        uint256 price_
+    ) {
         _fpaParams.price = price_;
         _auctionParams.implParams = abi.encode(_fpaParams);
         _;
     }
 
-    function _setMaxPayout(uint24 maxPayout_) internal {
+    function _setMaxPayout(
+        uint24 maxPayout_
+    ) internal {
         _fpaParams.maxPayoutPercent = maxPayout_;
         _auctionParams.implParams = abi.encode(_fpaParams);
     }
 
-    modifier givenMaxPayout(uint24 maxPayout_) {
+    modifier givenMaxPayout(
+        uint24 maxPayout_
+    ) {
         _setMaxPayout(maxPayout_);
         _;
     }
@@ -177,15 +197,21 @@ abstract contract FpsTest is Test, Permit2User {
 
     // ======== Internal Functions ======== //
 
-    function _scaleQuoteTokenAmount(uint256 amount_) internal view returns (uint256) {
+    function _scaleQuoteTokenAmount(
+        uint256 amount_
+    ) internal view returns (uint256) {
         return Math.mulDivDown(amount_, 10 ** _quoteTokenDecimals, _BASE_SCALE);
     }
 
-    function _scaleBaseTokenAmount(uint256 amount_) internal view returns (uint256) {
+    function _scaleBaseTokenAmount(
+        uint256 amount_
+    ) internal view returns (uint256) {
         return Math.mulDivDown(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
     }
 
-    function _getAuctionLot(uint96 lotId_) internal view returns (IAuction.Lot memory) {
+    function _getAuctionLot(
+        uint96 lotId_
+    ) internal view returns (IAuction.Lot memory) {
         return _module.getLot(lotId_);
     }
 

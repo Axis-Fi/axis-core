@@ -12,7 +12,7 @@ import {MockFeeOnTransferERC20} from "../lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "../lib/permit2/Permit2User.sol";
 import {MockWrappedDerivative} from "../lib/mocks/MockWrappedDerivative.sol";
 
-import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.8.0/tokens/ERC20.sol";
 import {ICallback} from "../../src/interfaces/ICallback.sol";
 import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
 
@@ -102,7 +102,9 @@ contract SendPayoutTest is Test, Permit2User {
         _;
     }
 
-    modifier givenAuctionHouseHasBalance(uint256 amount_) {
+    modifier givenAuctionHouseHasBalance(
+        uint256 amount_
+    ) {
         _payoutToken.mint(address(_auctionHouse), amount_);
         _;
     }

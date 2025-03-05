@@ -68,7 +68,9 @@ contract AtomicSetFeeTest is Test, Permit2User {
         _auctionHouse.setFee(_auctionKeycode, IFeeManager.FeeType.Protocol, _MAX_FEE + 1);
     }
 
-    function test_protocolFee(uint48 fee_) public {
+    function test_protocolFee(
+        uint48 fee_
+    ) public {
         uint48 fee = uint48(bound(fee_, 0, _MAX_FEE));
 
         vm.prank(_OWNER);
@@ -82,7 +84,9 @@ contract AtomicSetFeeTest is Test, Permit2User {
         assertEq(maxCuratorFee, 0);
     }
 
-    function test_maxReferrerFee(uint48 fee_) public {
+    function test_maxReferrerFee(
+        uint48 fee_
+    ) public {
         uint48 fee = uint48(bound(fee_, 0, _MAX_FEE));
 
         vm.prank(_OWNER);
@@ -96,7 +100,9 @@ contract AtomicSetFeeTest is Test, Permit2User {
         assertEq(maxCuratorFee, 0);
     }
 
-    function test_curatorFee(uint48 fee_) public {
+    function test_curatorFee(
+        uint48 fee_
+    ) public {
         uint48 fee = uint48(bound(fee_, 0, _MAX_FEE));
 
         vm.prank(_OWNER);
