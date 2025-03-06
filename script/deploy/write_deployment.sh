@@ -4,6 +4,9 @@
 # ./write_deployment.sh <key> <value>
 # Updates the env.json file with the key-value pair
 
+# Exit on error
+set -e
+
 # Get command-line arguments
 KEY=$1
 VALUE=$2

@@ -16,19 +16,19 @@ import {
 } from "../../../src/modules/Modules.sol";
 
 contract KeycodeTest is Test {
-    function test_keycode() external {
+    function test_keycode() external pure {
         Keycode keycode = toKeycode("TEST");
         assertEq(fromKeycode(keycode), "TEST");
     }
 
-    function test_ensureValidVeecode_singleDigitNumber() external {
+    function test_ensureValidVeecode_singleDigitNumber() external pure {
         Keycode keycode = toKeycode("TEST");
         Veecode t1Veecode = wrapVeecode(keycode, 1);
 
         ensureValidVeecode(t1Veecode);
     }
 
-    function test_ensureValidVeecode_doubleDigitNumber() external {
+    function test_ensureValidVeecode_doubleDigitNumber() external pure {
         Keycode keycode = toKeycode("TEST");
         Veecode t1Veecode = wrapVeecode(keycode, 11);
 
@@ -45,7 +45,7 @@ contract KeycodeTest is Test {
         return bytes5(keycodeBytes);
     }
 
-    function test_ensureValidVeecode_length() external {
+    function test_ensureValidVeecode_length() external pure {
         Keycode t1Keycode = toKeycode("TES");
         Veecode t1Veecode = wrapVeecode(t1Keycode, 11);
         ensureValidVeecode(t1Veecode);
@@ -66,6 +66,7 @@ contract KeycodeTest is Test {
         assertFalse(fromVeecode(t3Veecode) == fromVeecode(t4Veecode));
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_ensureValidVeecode_invalidRequiredCharacter(
         uint8 character_,
         uint8 index_
@@ -88,6 +89,7 @@ contract KeycodeTest is Test {
         ensureValidVeecode(t1Veecode);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_ensureValidVeecode_invalidOptionalCharacter(
         uint8 character_,
         uint8 index_
@@ -110,6 +112,7 @@ contract KeycodeTest is Test {
         ensureValidVeecode(t1Veecode);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_ensureValidVeecode_zeroVersion() external {
         Keycode keycode = toKeycode("TEST");
         Veecode t1Veecode = wrapVeecode(keycode, 0);
@@ -120,6 +123,7 @@ contract KeycodeTest is Test {
         ensureValidVeecode(t1Veecode);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_ensureValidVeecode_invalidVersion(
         uint8 version_
     ) external {
@@ -135,7 +139,7 @@ contract KeycodeTest is Test {
         ensureValidVeecode(t1Veecode);
     }
 
-    function test_unwrapVeecode() external {
+    function test_unwrapVeecode() external pure {
         Keycode keycode = toKeycode("TEST");
         Veecode t1Veecode = wrapVeecode(keycode, 1);
         (Keycode keycode_, uint8 moduleVersion_) = unwrapVeecode(t1Veecode);

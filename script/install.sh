@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit on error
+set -e
+
 # echo ""
 # echo "*** Setting up submodules"
 # git submodule init

@@ -9,6 +9,18 @@ import {ECIESFFITest} from "./ECIES_FFI.sol";
 // ECIES
 import {Point, ECIES} from "../../../src/lib/ECIES.sol";
 
+contract EncryptWrapper {
+    function encrypt(
+        uint256 message_,
+        Point memory recipientPubKey_,
+        uint256 privateKey_,
+        uint256 salt_
+    ) public view returns (uint256 ciphertext_, Point memory ciphertextPubKey_) {
+        (ciphertext_, ciphertextPubKey_) =
+            ECIES.encrypt(message_, recipientPubKey_, privateKey_, salt_);
+    }
+}
+
 contract ECIESEncryptTest is Test {
     // [X] when the public key is invalid
     //      [X] it reverts
@@ -18,21 +30,25 @@ contract ECIESEncryptTest is Test {
     //      [X] it reverts
     // [X] it encrypts the message and provides the message pub key
 
-    function testFail_invalidPubKey() public view {
+    /// forge-config: default.allow_internal_expect_revert = true
+    function test_invalidPubKey_reverts() public {
         // Setup encryption parameters
         uint256 message = 1;
         Point memory recipientPubKey = Point(1, 1);
         uint256 privateKey = 1;
         uint256 salt = 1;
 
-        // Attempt to encrypt with an invalid public key, expect revert
-        // bytes memory err = abi.encodePacked("Invalid public key.");
-        // vm.expectRevert(err);
-        // For some reason, using expect revert causes the ecMul operation to fail.
-        // It seems to be a bug in the VM, so we use a generic fail test, which we've shown reverts correctly with stack traces.
-        ECIES.encrypt(message, recipientPubKey, privateKey, salt);
+        EncryptWrapper wrapper = new EncryptWrapper();
+
+        // Expect revert
+        vm.expectRevert("Invalid public key.");
+
+        // For some reason, using expect revert causes the ecMul operation to fail when using the ECIES library directly.
+        // It seems to be a bug in the VM, so we wrap the call in another contract.
+        wrapper.encrypt(message, recipientPubKey, privateKey, salt);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_privateKeyTooLarge(
         uint256 privateKey_
     ) public {
@@ -49,6 +65,7 @@ contract ECIESEncryptTest is Test {
         ECIES.encrypt(message, recipientPubKey, privateKey_, salt);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_privateKeyZero() public {
         // Setup encryption parameters
         uint256 message = 1;
@@ -62,7 +79,7 @@ contract ECIESEncryptTest is Test {
         ECIES.encrypt(message, recipientPubKey, privateKey, salt);
     }
 
-    function test_encrypt() public {
+    function test_encrypt() public view {
         // Setup encryption parameters
         uint256 message = 1;
         Point memory recipientPubKey = ECIES.calcPubKey(Point(1, 2), 2);
@@ -92,7 +109,7 @@ contract ECIESEncryptTest is Test {
         uint256 salt_,
         uint256 recipientPrivKey_,
         uint256 messagePrivKey_
-    ) public {
+    ) public view {
         vm.assume(recipientPrivKey_ > 0 && recipientPrivKey_ < ECIES.GROUP_ORDER);
         vm.assume(messagePrivKey_ > 0 && messagePrivKey_ < ECIES.GROUP_ORDER);
 
@@ -134,7 +151,7 @@ contract ECIESEncryptTest is Test {
         console2.log("Gas used: ", startGas - endGas);
     }
 
-    function test_roundtrip() public {
+    function test_roundtrip() public view {
         // Setup encryption parameters
         uint256 message = 1;
         uint256 recipientPrivKey = 2;
@@ -159,7 +176,7 @@ contract ECIESEncryptTest is Test {
         uint256 recipientPrivKey_,
         uint256 messagePrivKey_,
         uint256 salt_
-    ) public {
+    ) public view {
         // Limit fuzz values since we do not allow private keys to be 0 or greater than the group order
         vm.assume(recipientPrivKey_ > 0 && recipientPrivKey_ < ECIES.GROUP_ORDER);
         vm.assume(messagePrivKey_ > 0 && messagePrivKey_ < ECIES.GROUP_ORDER);

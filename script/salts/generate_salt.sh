@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./write_salt.sh --bytecode <bytecode file> --prefix <prefix> --saltKey <salt key> --bytecodeHash <bytecode hash> [--deployer <deployer>]
+# ./generate_salt.sh --bytecode <bytecode file> --prefix <prefix> --bytecodeHash <bytecode hash> [--deployer <deployer>]
 
 # Exit on error
 set -e
@@ -38,13 +38,6 @@ then
   exit 1
 fi
 
-# Check if saltKey is set
-if [ -z "$saltKey" ]
-then
-  echo "No salt key specified. Provide the salt key after the prefix."
-  exit 1
-fi
-
 # Check if bytecodeHash is set
 if [ -z "$bytecodeHash" ]
 then
@@ -64,20 +57,4 @@ output=$(cast create2 --case-sensitive --starts-with $prefix --init-code $(cat $
 # Get the first salt (as cast will often return the same salt multiple times)
 salt=$(echo "$output" | grep 'Salt: ' | head -n 1 | awk -F' ' '{print $2}')
 
-# Create the salts file if it does not exist or is empty
-salt_file="./script/salts/salts.json"
-salt_tmp_file="./script/salts/salts.json.tmp"
-if [ ! -f $salt_file ] || [ ! -s $salt_file ]; then
-  echo "{}" > $salt_file
-fi
-
-# Set the salt in the salts file (and sort)
-# jq will replace existing salts for the same key and args hash, or add new entries
-# It will write in the format of:
-# {
-#   "<saltKey>": {
-#     "<bytecodeHash>": "<SALT>"
-#   }
-# }
-jq -S --arg contract "$saltKey" --arg hash "$bytecodeHash" --arg salt "$salt" '.[$contract] += { $hash: $salt }' $salt_file > $salt_tmp_file && mv $salt_tmp_file $salt_file
-echo "Wrote salt for key $saltKey to $salt_file"
+echo "$salt"

@@ -30,9 +30,10 @@ import {AuctionModule} from "../../src/modules/Auction.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "../../src/modules/Keycode.sol";
 
-import {WithSalts} from "../lib/WithSalts.sol";
+import {WithSalts} from "../../script/salts/WithSalts.s.sol";
+import {TestConstants} from "../Constants.sol";
 
-abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
+abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestConstants {
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
 
@@ -51,7 +52,6 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
 
     uint256 internal constant _BASE_SCALE = 1e18;
 
-    address internal constant _OWNER = address(0x1);
     address internal constant _SELLER = address(0x2);
     address internal constant _PROTOCOL = address(0x3);
     address internal constant _CURATOR = address(0x4);
@@ -106,7 +106,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
 
         // Create an AtomicAuctionHouse at a deterministic address, since it is used as input to callbacks
         AtomicAuctionHouse auctionHouse = new AtomicAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
-        _auctionHouse = AtomicAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        _auctionHouse = AtomicAuctionHouse(_AUCTION_HOUSE);
         vm.etch(address(_auctionHouse), address(auctionHouse).code);
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
         vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
@@ -272,6 +272,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
 
     modifier givenLotHasAllowlist() {
         // Get the salt
+        // 10011000 = 0x98
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -283,7 +284,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
             sendBaseTokens: false
         });
         bytes memory args = abi.encode(address(_auctionHouse), permissions);
-        bytes32 salt = _getTestSalt("MockCallback", type(MockCallback).creationCode, args);
+        bytes32 salt = _generateSalt("MockCallback", type(MockCallback).creationCode, args, "98");
 
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions);
@@ -367,6 +368,10 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
 
     modifier givenCallbackIsSet() {
         // Get the salt
+        // 11111100 = 0xFC
+        // 11111110 = 0xFE
+        // 11111111 = 0xFF
+        // 11111101 = 0xFD
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: true,
@@ -377,8 +382,16 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
             receiveQuoteTokens: _callbackReceiveQuoteTokens,
             sendBaseTokens: _callbackSendBaseTokens
         });
+        string memory prefix = "FC";
+        if (_callbackReceiveQuoteTokens && _callbackSendBaseTokens) {
+            prefix = "FF";
+        } else if (_callbackReceiveQuoteTokens) {
+            prefix = "FE";
+        } else if (_callbackSendBaseTokens) {
+            prefix = "FD";
+        }
         bytes memory args = abi.encode(address(_auctionHouse), permissions);
-        bytes32 salt = _getTestSalt("MockCallback", type(MockCallback).creationCode, args);
+        bytes32 salt = _generateSalt("MockCallback", type(MockCallback).creationCode, args, prefix);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402

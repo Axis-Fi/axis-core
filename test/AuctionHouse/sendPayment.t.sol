@@ -9,12 +9,12 @@ import {MockFeeOnTransferERC20} from "../lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "../lib/permit2/Permit2User.sol";
 import {Callbacks} from "../../src/lib/Callbacks.sol";
 
-import {WithSalts} from "../lib/WithSalts.sol";
+import {WithSalts} from "../../script/salts/WithSalts.s.sol";
+import {TestConstants} from "../Constants.sol";
 
-contract SendPaymentTest is Test, Permit2User, WithSalts {
+contract SendPaymentTest is Test, Permit2User, WithSalts, TestConstants {
     MockAuctionHouse internal _auctionHouse;
 
-    address internal constant _OWNER = address(0x1);
     address internal constant _SELLER = address(0x2);
     address internal constant _PROTOCOL = address(0x3);
     address internal constant _USER = address(0x4);
@@ -31,7 +31,7 @@ contract SendPaymentTest is Test, Permit2User, WithSalts {
 
         // Create an AuctionHouse at a deterministic address, since it is used as input to callbacks
         MockAuctionHouse mockAuctionHouse = new MockAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
-        _auctionHouse = MockAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        _auctionHouse = MockAuctionHouse(_AUCTION_HOUSE);
         vm.etch(address(_auctionHouse), address(mockAuctionHouse).code);
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
         vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
@@ -53,6 +53,8 @@ contract SendPaymentTest is Test, Permit2User, WithSalts {
 
     modifier givenAuctionHasCallback() {
         // Get the salt
+        // 00000000 = 0x00
+        // 00000010 = 0x02
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -63,8 +65,12 @@ contract SendPaymentTest is Test, Permit2User, WithSalts {
             receiveQuoteTokens: _callbackReceiveQuoteTokens,
             sendBaseTokens: false
         });
+        string memory prefix = "00";
+        if (_callbackReceiveQuoteTokens) {
+            prefix = "02";
+        }
         bytes memory args = abi.encode(address(_auctionHouse), permissions);
-        bytes32 salt = _getTestSalt("MockCallback", type(MockCallback).creationCode, args);
+        bytes32 salt = _generateSalt("MockCallback", type(MockCallback).creationCode, args, prefix);
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions);
