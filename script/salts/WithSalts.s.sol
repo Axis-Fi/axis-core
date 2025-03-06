@@ -17,21 +17,18 @@ contract WithSalts is Script {
     }
 
     function _getBytecodePath(
-        string memory name_
+        string memory name_,
+        bytes32 bytecodeHash_
     ) internal pure returns (string memory) {
-        return string.concat(_getBytecodeDirectory(), "/", name_, ".bin");
+        return string.concat(
+            _getBytecodeDirectory(), "/", name_, "-", vm.toString(bytecodeHash_), ".bin"
+        );
     }
 
     function _createBytecodeDirectory() internal {
         // Create the bytecode folder if it doesn't exist
         if (!vm.isDir(_getBytecodeDirectory())) {
-            console2.log("Creating bytecode directory");
-
-            string[] memory inputs = new string[](2);
-            inputs[0] = "mkdir";
-            inputs[1] = _BYTECODE_DIR;
-
-            vm.ffi(inputs);
+            vm.createDir(_getBytecodeDirectory(), true);
         }
     }
 
@@ -44,10 +41,53 @@ contract WithSalts is Script {
         bytes memory bytecode = abi.encodePacked(creationCode_, contractArgs_);
         bytecodeHash = keccak256(bytecode);
 
-        bytecodePath = _getBytecodePath(contractName_);
+        bytecodePath = _getBytecodePath(contractName_, bytecodeHash);
+
+        // Don't write the bytecode if it already exists
+        if (vm.isFile(bytecodePath)) {
+            console2.log("Skipping bytecode write for ", contractName_);
+            return (bytecodePath, bytecodeHash);
+        }
+
+        _createBytecodeDirectory();
         vm.writeFile(bytecodePath, vm.toString(bytecode));
 
         return (bytecodePath, bytecodeHash);
+    }
+
+    function _generateSalt(
+        string memory contractName_,
+        bytes memory creationCode_,
+        bytes memory contractArgs_,
+        string memory prefix_
+    ) internal returns (bytes32) {
+        // Write the bytecode
+        (string memory bytecodePath, bytes32 bytecodeHash) =
+            _writeBytecode(contractName_, creationCode_, contractArgs_);
+
+        // Call the salts script to generate and return the salt
+        string[] memory inputs = new string[](9);
+        inputs[0] = "./script/salts/generate_salt.sh";
+        inputs[1] = "--bytecodeFile";
+        inputs[2] = bytecodePath;
+        inputs[3] = "--bytecodeHash";
+        inputs[4] = vm.toString(bytecodeHash);
+        inputs[5] = "--prefix";
+        inputs[6] = prefix_;
+
+        bytes memory output = vm.ffi(inputs);
+        console2.log("Salt generated for", contractName_, "with prefix", prefix_);
+        console2.logBytes32(bytes32(output));
+
+        return bytes32(output);
+    }
+
+    function _getTestSalt(
+        string memory contractName_,
+        bytes memory creationCode_,
+        bytes memory contractArgs_
+    ) internal returns (bytes32) {
+        return _getSalt(string.concat("Test_", contractName_), creationCode_, contractArgs_);
     }
 
     /// @notice Gets the salt for a given key

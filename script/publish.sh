@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit on error
+set -e
+
 # This script is used to release a new version of the package. It will:
 #  - Validate that the working directory is clean
 #  - Validate the version number argument

@@ -9,6 +9,9 @@
 # RPC_URL:            URL for the RPC node. Should be specified in .env.
 # VERIFIER_URL:       URL for the Etherscan API verifier. Should be specified when used on an unsupported chain.
 
+# Exit on error
+set -e
+
 # Iterate through named arguments
 # Source: https://unix.stackexchange.com/a/388038
 while [ $# -gt 0 ]; do
