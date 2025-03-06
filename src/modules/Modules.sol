@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.8.19;
 
-import {Owned} from "@solmate-6.7.0/auth/Owned.sol";
+import {Owned} from "@solmate-6.8.0/auth/Owned.sol";
 import "./Keycode.sol";
 
 /// @notice    Abstract contract that provides functionality for installing and interacting with modules.
@@ -24,7 +24,9 @@ abstract contract WithModules is Owned {
 
     // ========= CONSTRUCTOR ========= //
 
-    constructor(address owner_) Owned(owner_) {}
+    constructor(
+        address owner_
+    ) Owned(owner_) {}
 
     // ========= STRUCTS ========= //
 
@@ -64,7 +66,9 @@ abstract contract WithModules is Owned {
     /// @dev        - The module version is not one greater than the latest version
     ///
     /// @param      newModule_  The new module
-    function installModule(Module newModule_) external onlyOwner {
+    function installModule(
+        Module newModule_
+    ) external onlyOwner {
         // Validate new module is a contract, has correct parent, and has valid Keycode
         _ensureContract(address(newModule_));
         Veecode veecode = newModule_.VEECODE();
@@ -92,7 +96,9 @@ abstract contract WithModules is Owned {
         emit ModuleInstalled(keycode, version, address(newModule_));
     }
 
-    function _ensureContract(address target_) internal view {
+    function _ensureContract(
+        address target_
+    ) internal view {
         if (target_.code.length == 0) revert TargetNotAContract(target_);
     }
 
@@ -107,7 +113,9 @@ abstract contract WithModules is Owned {
     /// @dev            - The module is already sunset
     ///
     /// @param          keycode_    The module keycode
-    function sunsetModule(Keycode keycode_) external onlyOwner {
+    function sunsetModule(
+        Keycode keycode_
+    ) external onlyOwner {
         // Check that the module is installed
         if (!_moduleIsInstalled(keycode_)) revert ModuleNotInstalled(keycode_, 0);
 
@@ -125,7 +133,9 @@ abstract contract WithModules is Owned {
     ///
     /// @param          keycode_    The module keycode
     /// @return         True if the module is installed, false otherwise
-    function _moduleIsInstalled(Keycode keycode_) internal view returns (bool) {
+    function _moduleIsInstalled(
+        Keycode keycode_
+    ) internal view returns (bool) {
         // Any module that has been installed will have a latest version greater than 0
         // We can check not equal here to save gas
         return getModuleStatus[keycode_].latestVersion != uint8(0);
@@ -138,7 +148,9 @@ abstract contract WithModules is Owned {
     ///
     /// @param          keycode_    The module keycode
     /// @return         The address of the latest version of the module
-    function _getLatestModuleIfActive(Keycode keycode_) internal view returns (address) {
+    function _getLatestModuleIfActive(
+        Keycode keycode_
+    ) internal view returns (address) {
         // Check that the module is installed
         ModStatus memory status = getModuleStatus[keycode_];
         if (status.latestVersion == uint8(0)) revert ModuleNotInstalled(keycode_, 0);
@@ -184,7 +196,9 @@ abstract contract WithModules is Owned {
     ///
     /// @param          veecode_    The module Veecode
     /// @return         The address of the module
-    function _getModuleIfInstalled(Veecode veecode_) internal view returns (address) {
+    function _getModuleIfInstalled(
+        Veecode veecode_
+    ) internal view returns (address) {
         // In this case, it's simpler to check that the stored address is not zero
         Module mod = getModuleForVeecode[veecode_];
         if (address(mod) == address(0)) {
@@ -259,7 +273,9 @@ abstract contract Module {
 
     // ========= CONSTRUCTOR ========= //
 
-    constructor(address parent_) {
+    constructor(
+        address parent_
+    ) {
         if (parent_ == address(0)) revert Module_InvalidParent(parent_);
 
         PARENT = parent_;

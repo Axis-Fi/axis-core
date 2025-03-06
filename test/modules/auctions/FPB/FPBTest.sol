@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "@forge-std-1.9.1/Test.sol";
-import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 
 // Mocks
 import {Permit2User} from "../../../lib/permit2/Permit2User.sol";
@@ -26,6 +26,7 @@ abstract contract FpbTest is Test, Permit2User {
     uint48 internal constant _DURATION = 1 days;
     uint24 internal constant _MIN_FILL_PERCENT = 50e2; // 50%
     uint256 internal constant _PRICE = 2e18;
+    uint24 internal constant _ONE_HUNDRED_PERCENT = 100e2;
 
     BatchAuctionHouse internal _auctionHouse;
     FixedPriceBatch internal _module;
@@ -61,7 +62,9 @@ abstract contract FpbTest is Test, Permit2User {
 
     // ========== MODIFIERS ========== //
 
-    function _setQuoteTokenDecimals(uint8 decimals_) internal {
+    function _setQuoteTokenDecimals(
+        uint8 decimals_
+    ) internal {
         _quoteTokenDecimals = decimals_;
 
         _fpbParams.price = _scaleQuoteTokenAmount(_PRICE);
@@ -73,12 +76,16 @@ abstract contract FpbTest is Test, Permit2User {
         }
     }
 
-    modifier givenQuoteTokenDecimals(uint8 decimals_) {
+    modifier givenQuoteTokenDecimals(
+        uint8 decimals_
+    ) {
         _setQuoteTokenDecimals(decimals_);
         _;
     }
 
-    function _setBaseTokenDecimals(uint8 decimals_) internal {
+    function _setBaseTokenDecimals(
+        uint8 decimals_
+    ) internal {
         _baseTokenDecimals = decimals_;
 
         if (!_auctionParams.capacityInQuote) {
@@ -86,26 +93,36 @@ abstract contract FpbTest is Test, Permit2User {
         }
     }
 
-    modifier givenBaseTokenDecimals(uint8 decimals_) {
+    modifier givenBaseTokenDecimals(
+        uint8 decimals_
+    ) {
         _setBaseTokenDecimals(decimals_);
         _;
     }
 
-    function _setCapacity(uint256 capacity_) internal {
+    function _setCapacity(
+        uint256 capacity_
+    ) internal {
         _auctionParams.capacity = capacity_;
     }
 
-    modifier givenLotCapacity(uint256 capacity_) {
+    modifier givenLotCapacity(
+        uint256 capacity_
+    ) {
         _setCapacity(capacity_);
         _;
     }
 
-    modifier givenStartTimestamp(uint48 start_) {
+    modifier givenStartTimestamp(
+        uint48 start_
+    ) {
         _auctionParams.start = start_;
         _;
     }
 
-    modifier givenDuration(uint48 duration_) {
+    modifier givenDuration(
+        uint48 duration_
+    ) {
         _auctionParams.duration = duration_;
         _;
     }
@@ -120,22 +137,30 @@ abstract contract FpbTest is Test, Permit2User {
         _;
     }
 
-    function _setPrice(uint256 price_) internal {
+    function _setPrice(
+        uint256 price_
+    ) internal {
         _fpbParams.price = price_;
         _auctionParams.implParams = abi.encode(_fpbParams);
     }
 
-    modifier givenPrice(uint256 price_) {
+    modifier givenPrice(
+        uint256 price_
+    ) {
         _setPrice(price_);
         _;
     }
 
-    function _setMinFillPercent(uint24 minFillPercent_) internal {
+    function _setMinFillPercent(
+        uint24 minFillPercent_
+    ) internal {
         _fpbParams.minFillPercent = minFillPercent_;
         _auctionParams.implParams = abi.encode(_fpbParams);
     }
 
-    modifier givenMinFillPercent(uint24 minFillPercent_) {
+    modifier givenMinFillPercent(
+        uint24 minFillPercent_
+    ) {
         _setMinFillPercent(minFillPercent_);
         _;
     }
@@ -168,12 +193,16 @@ abstract contract FpbTest is Test, Permit2User {
         _;
     }
 
-    function _createBid(uint256 amount_) internal {
+    function _createBid(
+        uint256 amount_
+    ) internal {
         vm.prank(address(_auctionHouse));
         _module.bid(_lotId, _BIDDER, _REFERRER, amount_, abi.encode(""));
     }
 
-    modifier givenBidIsCreated(uint256 amount_) {
+    modifier givenBidIsCreated(
+        uint256 amount_
+    ) {
         _createBid(amount_);
         _;
     }
@@ -208,12 +237,16 @@ abstract contract FpbTest is Test, Permit2User {
         _;
     }
 
-    function _refundBid(uint64 bidId_) internal returns (uint256 refundAmount) {
+    function _refundBid(
+        uint64 bidId_
+    ) internal returns (uint256 refundAmount) {
         vm.prank(address(_auctionHouse));
         return _module.refundBid(_lotId, bidId_, 0, _BIDDER);
     }
 
-    modifier givenBidIsRefunded(uint64 bidId_) {
+    modifier givenBidIsRefunded(
+        uint64 bidId_
+    ) {
         _refundBid(bidId_);
         _;
     }
@@ -228,7 +261,9 @@ abstract contract FpbTest is Test, Permit2User {
         return _module.claimBids(_lotId, bidIds);
     }
 
-    modifier givenBidIsClaimed(uint64 bidId_) {
+    modifier givenBidIsClaimed(
+        uint64 bidId_
+    ) {
         uint64[] memory bidIds = new uint64[](1);
         bidIds[0] = bidId_;
 
@@ -239,11 +274,15 @@ abstract contract FpbTest is Test, Permit2User {
 
     // ======== Internal Functions ======== //
 
-    function _scaleQuoteTokenAmount(uint256 amount_) internal view returns (uint256) {
+    function _scaleQuoteTokenAmount(
+        uint256 amount_
+    ) internal view returns (uint256) {
         return Math.mulDivDown(amount_, 10 ** _quoteTokenDecimals, _BASE_SCALE);
     }
 
-    function _scaleBaseTokenAmount(uint256 amount_) internal view returns (uint256) {
+    function _scaleBaseTokenAmount(
+        uint256 amount_
+    ) internal view returns (uint256) {
         return Math.mulDivDown(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
     }
 }

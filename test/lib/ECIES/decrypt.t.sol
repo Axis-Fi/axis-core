@@ -20,6 +20,7 @@ contract ECIESDecryptTest is Test {
 
     function setUp() external {}
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_invalidPubKey() public {
         // Setup encryption parameters
         uint256 ciphertext = 1;
@@ -33,7 +34,10 @@ contract ECIESDecryptTest is Test {
         ECIES.decrypt(ciphertext, ciphertextPubKey, recipientPrivateKey, salt);
     }
 
-    function testRevert_privateKeyTooLarge(uint256 privateKey_) public {
+    /// forge-config: default.allow_internal_expect_revert = true
+    function testRevert_privateKeyTooLarge(
+        uint256 privateKey_
+    ) public {
         vm.assume(privateKey_ >= ECIES.GROUP_ORDER);
 
         // Setup encryption parameters
@@ -47,6 +51,7 @@ contract ECIESDecryptTest is Test {
         ECIES.decrypt(ciphertext, ciphertextPubKey, privateKey_, salt);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function testRevert_privateKeyZero() public {
         // Setup encryption parameters
         uint256 ciphertext = 1;
@@ -60,7 +65,7 @@ contract ECIESDecryptTest is Test {
         ECIES.decrypt(ciphertext, ciphertextPubKey, privateKey, salt);
     }
 
-    function test_decrypt() public {
+    function test_decrypt() public view {
         // Setup encryption parameters
         uint256 ciphertext = 0xf96d7675ae04b89c9b5a9b0613d3530bb939186d05959efba9b3249a461abbc4;
         Point memory ciphertextPubKey = Point(
@@ -82,7 +87,7 @@ contract ECIESDecryptTest is Test {
         uint256 salt_,
         uint256 recipientPrivKey_,
         uint256 messagePrivKey_
-    ) public {
+    ) public view {
         vm.assume(recipientPrivKey_ > 0 && recipientPrivKey_ < ECIES.GROUP_ORDER);
         vm.assume(messagePrivKey_ > 0 && messagePrivKey_ < ECIES.GROUP_ORDER);
 

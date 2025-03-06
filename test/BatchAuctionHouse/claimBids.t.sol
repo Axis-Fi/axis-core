@@ -257,12 +257,16 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         _;
     }
 
-    modifier givenBidderTwoHasQuoteTokenBalance(uint256 amount_) {
+    modifier givenBidderTwoHasQuoteTokenBalance(
+        uint256 amount_
+    ) {
         _quoteToken.mint(_BIDDER_TWO, amount_);
         _;
     }
 
-    modifier givenBidderTwoHasQuoteTokenAllowance(uint256 amount_) {
+    modifier givenBidderTwoHasQuoteTokenAllowance(
+        uint256 amount_
+    ) {
         vm.prank(_BIDDER_TWO);
         _quoteToken.approve(address(_auctionHouse), amount_);
         _;

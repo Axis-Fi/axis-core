@@ -11,7 +11,9 @@ abstract contract WithEnvironment is Script {
     string public chain;
     string public env;
 
-    function _loadEnv(string calldata chain_) internal {
+    function _loadEnv(
+        string calldata chain_
+    ) internal {
         chain = chain_;
         console2.log("Using chain:", chain_);
 
@@ -24,7 +26,9 @@ abstract contract WithEnvironment is Script {
     ///
     /// @param  key_    The key to look up in the environment file
     /// @return address The address from the environment file, or the zero address
-    function _envAddress(string memory key_) internal view returns (address) {
+    function _envAddress(
+        string memory key_
+    ) internal view returns (address) {
         console2.log("    Checking in env.json");
         string memory fullKey = string.concat(".current.", chain, ".", key_);
         address addr;
@@ -47,7 +51,9 @@ abstract contract WithEnvironment is Script {
     ///
     /// @param  key_    The key to look up in the environment file
     /// @return address The address from the environment file
-    function _envAddressNotZero(string memory key_) internal view returns (address) {
+    function _envAddressNotZero(
+        string memory key_
+    ) internal view returns (address) {
         address addr = _envAddress(key_);
         require(
             addr != address(0), string.concat("WithEnvironment: key '", key_, "' has zero address")

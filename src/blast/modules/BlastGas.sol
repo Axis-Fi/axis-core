@@ -4,7 +4,9 @@ pragma solidity 0.8.19;
 interface IBlast {
     function configureClaimableGas() external;
 
-    function configureGovernor(address governor_) external;
+    function configureGovernor(
+        address governor_
+    ) external;
 }
 
 abstract contract BlastGas {

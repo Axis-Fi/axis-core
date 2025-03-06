@@ -18,7 +18,9 @@ contract MockAtomicAuctionModule is AtomicAuctionModule {
 
     mapping(uint96 lotId => bool isCancelled) public cancelled;
 
-    constructor(address _owner) AuctionModule(_owner) {
+    constructor(
+        address _owner
+    ) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
     }
 
@@ -28,7 +30,9 @@ contract MockAtomicAuctionModule is AtomicAuctionModule {
 
     function _auction(uint96, Lot memory, bytes memory) internal virtual override {}
 
-    function _cancelAuction(uint96 id_) internal override {
+    function _cancelAuction(
+        uint96 id_
+    ) internal override {
         cancelled[id_] = true;
     }
 
@@ -64,7 +68,9 @@ contract MockAtomicAuctionModule is AtomicAuctionModule {
         payoutData[lotId_] = multiplier_;
     }
 
-    function setPurchaseReverts(bool reverts_) external virtual {
+    function setPurchaseReverts(
+        bool reverts_
+    ) external virtual {
         purchaseReverts = reverts_;
     }
 
@@ -72,7 +78,11 @@ contract MockAtomicAuctionModule is AtomicAuctionModule {
 
     function priceFor(uint96 lotId_, uint256 payout_) external view override returns (uint256) {}
 
-    function maxPayout(uint96 lotId_) external view override returns (uint256) {}
+    function maxPayout(
+        uint96 lotId_
+    ) external view override returns (uint256) {}
 
-    function maxAmountAccepted(uint96 lotId_) external view override returns (uint256) {}
+    function maxAmountAccepted(
+        uint96 lotId_
+    ) external view override returns (uint256) {}
 }

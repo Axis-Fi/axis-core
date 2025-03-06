@@ -8,9 +8,9 @@ import {IFeeManager} from "../interfaces/IFeeManager.sol";
 import {Transfer} from "../lib/Transfer.sol";
 
 // External libraries
-import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
-import {ReentrancyGuard} from "@solmate-6.7.0/utils/ReentrancyGuard.sol";
-import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {ERC20} from "@solmate-6.8.0/tokens/ERC20.sol";
+import {ReentrancyGuard} from "@solmate-6.8.0/utils/ReentrancyGuard.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 
 import {Keycode} from "../modules/Keycode.sol";
 
@@ -34,7 +34,9 @@ abstract contract FeeManager is IFeeManager, ReentrancyGuard {
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address protocol_) {
+    constructor(
+        address protocol_
+    ) {
         _protocol = protocol_;
     }
 
@@ -111,7 +113,9 @@ abstract contract FeeManager is IFeeManager, ReentrancyGuard {
     /// @inheritdoc IFeeManager
     /// @dev        This function reverts if:
     ///             - re-entrancy is detected
-    function claimRewards(address token_) external nonReentrant {
+    function claimRewards(
+        address token_
+    ) external nonReentrant {
         ERC20 token = ERC20(token_);
         uint256 amount = rewards[msg.sender][token];
         rewards[msg.sender][token] = 0;

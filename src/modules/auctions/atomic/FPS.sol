@@ -12,7 +12,7 @@ import {Veecode, toVeecode} from "../../Modules.sol";
 import {AtomicAuctionModule} from "../AtomicAuctionModule.sol";
 
 // External libraries
-import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 
 /// @title  FixedPriceSale
 /// @notice A module for creating fixed price sale (atomic) auctions
@@ -24,7 +24,9 @@ contract FixedPriceSale is AtomicAuctionModule, IFixedPriceSale {
 
     // ========== SETUP ========== //
 
-    constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
+    constructor(
+        address auctionHouse_
+    ) AuctionModule(auctionHouse_) {
         // Set the minimum auction duration to 1 day initially
         minAuctionDuration = 1 days;
     }
@@ -80,7 +82,9 @@ contract FixedPriceSale is AtomicAuctionModule, IFixedPriceSale {
     ///             - The lot ID has been validated
     ///             - The caller has been authorized
     ///             - The auction has not concluded
-    function _cancelAuction(uint96 lotId_) internal pure override {}
+    function _cancelAuction(
+        uint96 lotId_
+    ) internal pure override {}
 
     // ========== PURCHASE ========== //
 
@@ -134,12 +138,16 @@ contract FixedPriceSale is AtomicAuctionModule, IFixedPriceSale {
     }
 
     /// @inheritdoc IAtomicAuction
-    function maxPayout(uint96 lotId_) public view override returns (uint256) {
+    function maxPayout(
+        uint96 lotId_
+    ) public view override returns (uint256) {
         return auctionData[lotId_].maxPayout;
     }
 
     /// @inheritdoc IAtomicAuction
-    function maxAmountAccepted(uint96 lotId_) public view override returns (uint256) {
+    function maxAmountAccepted(
+        uint96 lotId_
+    ) public view override returns (uint256) {
         return Math.mulDivUp(
             auctionData[lotId_].maxPayout,
             auctionData[lotId_].price,

@@ -401,6 +401,7 @@ contract CallbacksTest is Test, WithSalts {
         );
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_validateCallbacksPermissions_allFalse() public {
         (bytes32 salt, Callbacks.Permissions memory permissions) = _allFalseSalt();
         ICallback callback = _createCallback(salt, permissions);
@@ -408,6 +409,7 @@ contract CallbacksTest is Test, WithSalts {
         _assertValidateCallbacksPermissions(callback, permissions);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_validateCallbacksPermissions_onCreate() public {
         (bytes32 salt, Callbacks.Permissions memory permissions) = _onCreateSalt();
         ICallback callback = _createCallback(salt, permissions);
@@ -415,6 +417,7 @@ contract CallbacksTest is Test, WithSalts {
         _assertValidateCallbacksPermissions(callback, permissions);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_validateCallbacksPermissions_onCancel() public {
         (bytes32 salt, Callbacks.Permissions memory permissions) = _onCancelSalt();
         ICallback callback = _createCallback(salt, permissions);
@@ -422,6 +425,7 @@ contract CallbacksTest is Test, WithSalts {
         _assertValidateCallbacksPermissions(callback, permissions);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_validateCallbacksPermissions_onCurate() public {
         (bytes32 salt, Callbacks.Permissions memory permissions) = _onCurateSalt();
         ICallback callback = _createCallback(salt, permissions);
@@ -429,6 +433,7 @@ contract CallbacksTest is Test, WithSalts {
         _assertValidateCallbacksPermissions(callback, permissions);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_validateCallbacksPermissions_onPurchase() public {
         (bytes32 salt, Callbacks.Permissions memory permissions) = _onPurchaseSalt();
         ICallback callback = _createCallback(salt, permissions);
@@ -436,6 +441,7 @@ contract CallbacksTest is Test, WithSalts {
         _assertValidateCallbacksPermissions(callback, permissions);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_validateCallbacksPermissions_onBid() public {
         (bytes32 salt, Callbacks.Permissions memory permissions) = _onBidSalt();
         ICallback callback = _createCallback(salt, permissions);
@@ -443,6 +449,7 @@ contract CallbacksTest is Test, WithSalts {
         _assertValidateCallbacksPermissions(callback, permissions);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_validateCallbacksPermissions_onSettle() public {
         (bytes32 salt, Callbacks.Permissions memory permissions) = _onSettleSalt();
         ICallback callback = _createCallback(salt, permissions);
@@ -450,6 +457,7 @@ contract CallbacksTest is Test, WithSalts {
         _assertValidateCallbacksPermissions(callback, permissions);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_validateCallbacksPermissions_onReceiveQuoteTokens() public {
         (bytes32 salt, Callbacks.Permissions memory permissions) = _receiveQuoteTokensSalt();
         ICallback callback = _createCallback(salt, permissions);
@@ -457,6 +465,7 @@ contract CallbacksTest is Test, WithSalts {
         _assertValidateCallbacksPermissions(callback, permissions);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_validateCallbacksPermissions_onSendBaseTokens() public {
         (bytes32 salt, Callbacks.Permissions memory permissions) = _sendBaseTokensSalt();
         ICallback callback = _createCallback(salt, permissions);
@@ -646,7 +655,7 @@ contract CallbacksTest is Test, WithSalts {
     // [X] if only RECEIVE_QUOTE_TOKENS_FLAG is set, return true
     // [X] if any callback function is set, return true
 
-    function test_isValidCallbacksAddress_zero() public {
+    function test_isValidCallbacksAddress_zero() public pure {
         ICallback callback = ICallback(address(0));
 
         assertEq(callback.isValidCallbacksAddress(), true, "invalid");

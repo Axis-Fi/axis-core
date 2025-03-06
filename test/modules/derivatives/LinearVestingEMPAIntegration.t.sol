@@ -84,7 +84,9 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         _;
     }
 
-    function _formatBid(uint256 amountOut_) internal pure returns (uint256) {
+    function _formatBid(
+        uint256 amountOut_
+    ) internal pure returns (uint256) {
         uint256 formattedAmountOut;
         {
             uint128 subtracted;

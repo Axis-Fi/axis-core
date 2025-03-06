@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 
 import {Module} from "../../../../src/modules/Modules.sol";
 import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
@@ -71,7 +71,9 @@ contract FpsCreateAuctionTest is FpsTest {
         _createAuctionLot();
     }
 
-    function test_maxPayoutPercentIsLessThanMinimum_reverts(uint24 maxPayout_) public {
+    function test_maxPayoutPercentIsLessThanMinimum_reverts(
+        uint24 maxPayout_
+    ) public {
         uint24 maxPayout = uint24(bound(maxPayout_, 0, 1e2 - 1));
         _setMaxPayout(maxPayout);
 
@@ -83,7 +85,9 @@ contract FpsCreateAuctionTest is FpsTest {
         _createAuctionLot();
     }
 
-    function test_maxPayoutPercentIsGreaterThanMaximum_reverts(uint24 maxPayout_) public {
+    function test_maxPayoutPercentIsGreaterThanMaximum_reverts(
+        uint24 maxPayout_
+    ) public {
         uint24 maxPayout = uint24(bound(maxPayout_, 100e2 + 1, type(uint24).max));
         _setMaxPayout(maxPayout);
 
@@ -95,7 +99,9 @@ contract FpsCreateAuctionTest is FpsTest {
         _createAuctionLot();
     }
 
-    function test_maxPayoutPercent_fuzz(uint24 maxPayout_) public {
+    function test_maxPayoutPercent_fuzz(
+        uint24 maxPayout_
+    ) public {
         uint24 maxPayout = uint24(bound(maxPayout_, 1e2, 100e2));
         _setMaxPayout(maxPayout);
 

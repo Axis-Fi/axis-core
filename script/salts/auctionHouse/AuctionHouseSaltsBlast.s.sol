@@ -17,7 +17,9 @@ contract AuctionHouseSaltsBlast is Script, WithEnvironment, WithSalts {
     address internal _envWeth;
     address internal _envUsdb;
 
-    function _setUp(string calldata chain_) internal {
+    function _setUp(
+        string calldata chain_
+    ) internal {
         _loadEnv(chain_);
 
         // Cache required variables

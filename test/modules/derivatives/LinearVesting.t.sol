@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 // Libraries
 import {Test} from "@forge-std-1.9.1/Test.sol";
 import {console2} from "@forge-std-1.9.1/console2.sol";
-import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "@solmate-6.8.0/utils/FixedPointMathLib.sol";
 
 import {Permit2User} from "../../lib/permit2/Permit2User.sol";
 import {StringHelper} from "../../lib/String.sol";
@@ -162,7 +162,9 @@ contract LinearVestingTest is Test, Permit2User {
         _;
     }
 
-    modifier givenParentHasUnderlyingTokenBalance(uint256 balance_) {
+    modifier givenParentHasUnderlyingTokenBalance(
+        uint256 balance_
+    ) {
         _underlyingToken.mint(address(_auctionHouse), balance_);
 
         vm.prank(address(_auctionHouse));
@@ -203,7 +205,9 @@ contract LinearVestingTest is Test, Permit2User {
         );
     }
 
-    modifier givenAliceHasDerivativeTokens(uint256 amount_) {
+    modifier givenAliceHasDerivativeTokens(
+        uint256 amount_
+    ) {
         _mintDerivativeTokens(_ALICE, amount_);
         _;
     }
@@ -221,7 +225,9 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.mint(recipient_, _underlyingTokenAddress, _vestingParamsBytes, amount_, true);
     }
 
-    modifier givenAliceHasWrappedDerivativeTokens(uint256 amount_) {
+    modifier givenAliceHasWrappedDerivativeTokens(
+        uint256 amount_
+    ) {
         _mintWrappedDerivativeTokens(_ALICE, amount_);
         _;
     }
@@ -1720,7 +1726,9 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(SoulboundCloneERC20(_derivativeWrappedAddress).totalSupply(), 0);
     }
 
-    function test_redeemMax(uint48 elapsed_) public givenWrappedDerivativeIsDeployed {
+    function test_redeemMax(
+        uint48 elapsed_
+    ) public givenWrappedDerivativeIsDeployed {
         // Mint both wrapped and unwrapped
         _mintDerivativeTokens(_ALICE, _AMOUNT);
         _mintWrappedDerivativeTokens(_ALICE, _AMOUNT);
@@ -2418,7 +2426,9 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(balance, 0);
     }
 
-    function test_balanceOf(uint256 amount_) public givenWrappedDerivativeIsDeployed {
+    function test_balanceOf(
+        uint256 amount_
+    ) public givenWrappedDerivativeIsDeployed {
         uint256 amount = bound(amount_, 0, _AMOUNT);
 
         // Mint
@@ -2433,7 +2443,9 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(balance, amount);
     }
 
-    function test_balanceOf_wrapped(uint256 amount_) public givenWrappedDerivativeIsDeployed {
+    function test_balanceOf_wrapped(
+        uint256 amount_
+    ) public givenWrappedDerivativeIsDeployed {
         uint256 amount = bound(amount_, 0, _AMOUNT);
 
         // Mint

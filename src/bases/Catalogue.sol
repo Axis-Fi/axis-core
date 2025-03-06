@@ -24,14 +24,18 @@ abstract contract Catalogue is ICatalogue {
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address auctionHouse_) {
+    constructor(
+        address auctionHouse_
+    ) {
         auctionHouse = auctionHouse_;
     }
 
     // ========== AUCTION INFORMATION ========== //
 
     /// @inheritdoc ICatalogue
-    function getRouting(uint96 lotId_) public view returns (IAuctionHouse.Routing memory) {
+    function getRouting(
+        uint96 lotId_
+    ) public view returns (IAuctionHouse.Routing memory) {
         (
             address seller,
             address baseToken,
@@ -58,7 +62,9 @@ abstract contract Catalogue is ICatalogue {
     }
 
     /// @inheritdoc ICatalogue
-    function getFeeData(uint96 lotId_) public view returns (IAuctionHouse.FeeData memory) {
+    function getFeeData(
+        uint96 lotId_
+    ) public view returns (IAuctionHouse.FeeData memory) {
         (
             address curator,
             bool curated,
@@ -77,7 +83,9 @@ abstract contract Catalogue is ICatalogue {
     }
 
     /// @inheritdoc ICatalogue
-    function isLive(uint96 lotId_) public view returns (bool) {
+    function isLive(
+        uint96 lotId_
+    ) public view returns (bool) {
         IAuction module = IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
 
         // Get isLive from module
@@ -85,7 +93,9 @@ abstract contract Catalogue is ICatalogue {
     }
 
     /// @inheritdoc ICatalogue
-    function isUpcoming(uint96 lotId_) public view returns (bool) {
+    function isUpcoming(
+        uint96 lotId_
+    ) public view returns (bool) {
         IAuction module = IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
 
         // Get isUpcoming from module
@@ -93,7 +103,9 @@ abstract contract Catalogue is ICatalogue {
     }
 
     /// @inheritdoc ICatalogue
-    function hasEnded(uint96 lotId_) external view returns (bool) {
+    function hasEnded(
+        uint96 lotId_
+    ) external view returns (bool) {
         IAuction module = IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
 
         // Get hasEnded from module
@@ -101,7 +113,9 @@ abstract contract Catalogue is ICatalogue {
     }
 
     /// @inheritdoc ICatalogue
-    function remainingCapacity(uint96 lotId_) external view returns (uint256) {
+    function remainingCapacity(
+        uint96 lotId_
+    ) external view returns (uint256) {
         IAuction module = IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
 
         // Get remaining capacity from module

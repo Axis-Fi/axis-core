@@ -6,7 +6,7 @@ import {Test} from "@forge-std-1.9.1/Test.sol";
 import {console2} from "@forge-std-1.9.1/console2.sol";
 
 // Mocks
-import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
+import {MockERC20} from "@solmate-6.8.0/test/utils/mocks/MockERC20.sol";
 import {MockAtomicAuctionModule} from "./MockAtomicAuctionModule.sol";
 import {Permit2User} from "../../lib/permit2/Permit2User.sol";
 
@@ -83,7 +83,9 @@ contract AuctionTest is Test, Permit2User {
     // [X] creates the auction lot with a custom duration
     // [X] creates the auction lot when the start time is in the future
 
-    function testReverts_whenStartTimeIsInThePast(uint48 timestamp_) external {
+    function testReverts_whenStartTimeIsInThePast(
+        uint48 timestamp_
+    ) external {
         console2.log("block.timestamp", block.timestamp);
         uint48 start = uint48(bound(timestamp_, 1, block.timestamp - 1));
 
@@ -99,7 +101,9 @@ contract AuctionTest is Test, Permit2User {
         _auctionHouse.auction(_routingParams, _auctionParams, _infoHash);
     }
 
-    function testReverts_whenDurationIsLessThanMinimum(uint48 duration_) external {
+    function testReverts_whenDurationIsLessThanMinimum(
+        uint48 duration_
+    ) external {
         uint48 duration = uint48(bound(duration_, 0, _mockAuctionModule.minAuctionDuration() - 1));
 
         // Update auction params
@@ -151,7 +155,9 @@ contract AuctionTest is Test, Permit2User {
         assertEq(lot.conclusion, lot.start + _auctionParams.duration);
     }
 
-    function test_success_withCustomDuration(uint48 duration_) external {
+    function test_success_withCustomDuration(
+        uint48 duration_
+    ) external {
         uint48 duration = uint48(bound(duration_, _mockAuctionModule.minAuctionDuration(), 1 days));
 
         // Update auction params
@@ -164,7 +170,9 @@ contract AuctionTest is Test, Permit2User {
         assertEq(lot.conclusion, lot.start + _auctionParams.duration);
     }
 
-    function test_success_withFutureStartTime(uint48 timestamp_) external {
+    function test_success_withFutureStartTime(
+        uint48 timestamp_
+    ) external {
         uint48 start = uint48(bound(timestamp_, block.timestamp + 1, block.timestamp + 1 days));
 
         // Update auction params
