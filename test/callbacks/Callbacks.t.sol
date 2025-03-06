@@ -7,18 +7,19 @@ import {ICallback} from "../../src/interfaces/ICallback.sol";
 import {MockCallback} from "./MockCallback.sol";
 
 import {Test} from "@forge-std-1.9.1/Test.sol";
-import {WithSalts} from "../lib/WithSalts.sol";
+import {WithSalts} from "../../script/salts/WithSalts.s.sol";
+import {TestConstants} from "../Constants.sol";
 
-contract CallbacksTest is Test, WithSalts {
+contract CallbacksTest is Test, WithSalts, TestConstants {
     using Callbacks for ICallback;
 
-    address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
-
     function _getMockCallbackSalt(
-        Callbacks.Permissions memory permissions_
+        Callbacks.Permissions memory permissions_,
+        string memory prefix_
     ) internal returns (bytes32) {
         bytes memory args = abi.encode(_AUCTION_HOUSE, permissions_);
-        return _getTestSalt("MockCallback", type(MockCallback).creationCode, args);
+
+        return _generateSalt("MockCallback", type(MockCallback).creationCode, args, prefix_);
     }
 
     function _allFalseSalt() internal returns (bytes32, Callbacks.Permissions memory) {
@@ -34,7 +35,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: false
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "00"), permissions);
     }
 
     function _onCreateSalt() internal returns (bytes32, Callbacks.Permissions memory) {
@@ -50,7 +51,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: false
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "80"), permissions);
     }
 
     function _onCancelSalt() internal returns (bytes32, Callbacks.Permissions memory) {
@@ -66,7 +67,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: false
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "40"), permissions);
     }
 
     function _onCurateSalt() internal returns (bytes32, Callbacks.Permissions memory) {
@@ -82,7 +83,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: false
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "20"), permissions);
     }
 
     function _onPurchaseSalt() internal returns (bytes32, Callbacks.Permissions memory) {
@@ -98,7 +99,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: false
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "10"), permissions);
     }
 
     function _onBidSalt() internal returns (bytes32, Callbacks.Permissions memory) {
@@ -114,10 +115,11 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: false
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "08"), permissions);
     }
 
     function _onSettleSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+        // 00000100 = 0x04
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -129,7 +131,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: false
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "04"), permissions);
     }
 
     function _receiveQuoteTokensSalt() internal returns (bytes32, Callbacks.Permissions memory) {
@@ -145,7 +147,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: false
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "02"), permissions);
     }
 
     function _sendBaseTokensSalt() internal returns (bytes32, Callbacks.Permissions memory) {
@@ -161,7 +163,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: true
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "01"), permissions);
     }
 
     function _sendBaseTokens_onCreateSalt()
@@ -180,7 +182,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: true
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "81"), permissions);
     }
 
     function _sendBaseTokens_onCurateSalt()
@@ -199,7 +201,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: true
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "21"), permissions);
     }
 
     function _sendBaseTokens_onCreate_onCurateSalt()
@@ -218,7 +220,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: true
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "A1"), permissions);
     }
 
     function _sendBaseTokens_onPurchaseSalt()
@@ -237,7 +239,7 @@ contract CallbacksTest is Test, WithSalts {
             sendBaseTokens: true
         });
 
-        return (_getMockCallbackSalt(permissions), permissions);
+        return (_getMockCallbackSalt(permissions, "11"), permissions);
     }
 
     // validateCallbacksPermissions
