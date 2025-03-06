@@ -3,6 +3,9 @@
 # Usage:
 # ./write_salt.sh --bytecode <bytecode file> --prefix <prefix> --saltKey <salt key> --bytecodeHash <bytecode hash> [--deployer <deployer>]
 
+# Exit on error
+set -e
+
 # Iterate through named arguments
 # Source: https://unix.stackexchange.com/a/388038
 while [ $# -gt 0 ]; do
