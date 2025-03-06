@@ -53,6 +53,13 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         address permit2_
     ) AuctionHouse(owner_, protocol_, permit2_) {}
 
+    // ========== VERSIONING ========== //
+
+    /// @inheritdoc IAuctionHouse
+    function VERSION() external pure returns (uint8 major, uint8 minor) {
+        return (1, 1);
+    }
+
     // ========== AUCTION MANAGEMENT ========== //
 
     /// @inheritdoc AuctionHouse

@@ -63,7 +63,7 @@ abstract contract WithModules is Owned {
     /// @dev        - The module is not a contract
     /// @dev        - The module has an invalid Veecode
     /// @dev        - The module (or other versions) is already installed
-    /// @dev        - The module version is not one greater than the latest version
+    /// @dev        - The module version is not greater than the latest version
     ///
     /// @param      newModule_  The new module
     function installModule(
@@ -75,9 +75,10 @@ abstract contract WithModules is Owned {
         ensureValidVeecode(veecode);
         (Keycode keycode, uint8 version) = unwrapVeecode(veecode);
 
-        // Validate that the module version is one greater than the latest version
+        // Validate that the module version is greater than the latest version
         ModStatus storage status = getModuleStatus[keycode];
-        if (version != status.latestVersion + 1) revert InvalidModuleInstall(keycode, version);
+        uint8 currentVersion = status.latestVersion;
+        if (version <= currentVersion) revert InvalidModuleInstall(keycode, version);
 
         // Store module data and remove sunset if applied
         status.latestVersion = version;
@@ -85,7 +86,7 @@ abstract contract WithModules is Owned {
         getModuleForVeecode[veecode] = newModule_;
 
         // If the module is not already installed, add it to the list of modules
-        if (version == uint8(1)) {
+        if (currentVersion == uint8(0)) {
             modules.push(keycode);
             modulesCount++;
         }

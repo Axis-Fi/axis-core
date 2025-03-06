@@ -115,6 +115,11 @@ interface IAuctionHouse {
         uint48 referrerFee; // 6 bytes
     }
 
+    // ========== VERSIONING ========== //
+
+    /// @notice     The version of the AuctionHouse
+    function VERSION() external view returns (uint8 major, uint8 minor);
+
     // ========== AUCTION MANAGEMENT ========== //
 
     /// @notice     Creates a new auction lot
